@@ -155,6 +155,8 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (settingsOpen || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
       if (/^[1-5]$/.test(event.key) && question && encounter && !encounter.completedAt) {
         const option = question.options[Number(event.key) - 1];
         if (option) void handleSelect(option.id);

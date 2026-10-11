@@ -1,4 +1,5 @@
 import type { ClinicalQuestion, Encounter, OptionId } from "../lib/contracts";
+import { QuestionFollowUp } from "./QuestionFollowUp";
 
 type Props = {
   question: ClinicalQuestion;
@@ -104,6 +105,7 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
                 ))}
               </div>
             </details>
+            <QuestionFollowUp question={question} />
             <button className="primary-button" type="button" disabled={busy} onClick={onNext}>Next question</button>
           </section>
         )}

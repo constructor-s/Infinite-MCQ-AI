@@ -28,6 +28,7 @@ describe("QuestionView", () => {
     render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["B"] })} mode="fresh" busy={false} onSelect={vi.fn()} onReveal={vi.fn()} onNext={vi.fn()} />);
     expect(screen.getByText(question.options[1].hint)).toBeInTheDocument();
     expect(screen.queryByText(/Answer: A/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Ask about this question" })).not.toBeInTheDocument();
   });
 
   it("reveals explanations and enables Next after resolution", () => {
@@ -35,6 +36,7 @@ describe("QuestionView", () => {
     const onNext = vi.fn();
     render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["A"], eventuallyCorrect: true, completedAt: new Date().toISOString() })} mode="fresh" busy={false} onSelect={vi.fn()} onReveal={vi.fn()} onNext={onNext} />);
     expect(screen.getByText("Answer: A")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Ask about this question" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next question" }));
     expect(onNext).toHaveBeenCalledOnce();
   });

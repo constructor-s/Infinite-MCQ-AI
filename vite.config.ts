@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import { VitePWA } from "vite-plugin-pwa";
 import generateHandler from "./api/questions/generate";
+import followUpHandler from "./api/questions/follow-up";
 import modelsHandler from "./api/models";
 
 function localApi(): Plugin {
@@ -12,7 +13,13 @@ function localApi(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
         const pathname = request.url?.split("?")[0];
-        const handler = pathname === "/api/questions/generate" ? generateHandler : pathname === "/api/models" ? modelsHandler : undefined;
+        const handler = pathname === "/api/questions/generate"
+          ? generateHandler
+          : pathname === "/api/questions/follow-up"
+            ? followUpHandler
+            : pathname === "/api/models"
+              ? modelsHandler
+              : undefined;
         if (!handler) return next();
         try {
           const chunks: Buffer[] = [];
