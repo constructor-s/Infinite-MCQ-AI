@@ -1,8 +1,8 @@
 import { ZodError } from "zod";
-import { answerQuestionFollowUp } from "../../src/server/questionFollowUp";
-import { GenerationError } from "../../src/server/questionGeneration";
+import { answerQuestionFollowUp } from "../../src/server/questionFollowUp.js";
+import { GenerationError } from "../../src/server/questionGeneration.js";
 
-export default async function handler(request: Request): Promise<Response> {
+export async function fetch(request: Request): Promise<Response> {
   if (request.method !== "POST") {
     return Response.json({ error: { code: "METHOD_NOT_ALLOWED", message: "Use POST" } }, { status: 405 });
   }

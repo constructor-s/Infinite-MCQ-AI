@@ -3,9 +3,9 @@ import { loadEnv, type Plugin, type PreviewServer, type ViteDevServer } from "vi
 import react from "@vitejs/plugin-react";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import { VitePWA } from "vite-plugin-pwa";
-import generateHandler from "./api/questions/generate";
-import followUpHandler from "./api/questions/follow-up";
-import modelsHandler from "./api/models";
+import { fetch as generateHandler } from "./api/questions/generate";
+import { fetch as followUpHandler } from "./api/questions/follow-up";
+import { fetch as modelsHandler } from "./api/models";
 
 function localApi(): Plugin {
   const attachApi = (server: ViteDevServer | PreviewServer) => {

@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { clinicalQuestionSchema } from "../lib/contracts";
-import { GenerationError, MODEL_OPTIONS } from "./questionGeneration";
+import { clinicalQuestionSchema } from "../lib/contracts.js";
+import { GenerationError, MODEL_OPTIONS } from "./questionGeneration.js";
 
 const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),

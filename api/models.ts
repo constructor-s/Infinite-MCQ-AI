@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import { MODEL_OPTIONS } from "../src/server/questionGeneration";
+import { MODEL_OPTIONS } from "../src/server/questionGeneration.js";
 
-export default async function handler(request: Request): Promise<Response> {
+export async function fetch(request: Request): Promise<Response> {
   if (request.method !== "GET") {
     return Response.json({ error: { code: "METHOD_NOT_ALLOWED", message: "Use GET" } }, { status: 405 });
   }

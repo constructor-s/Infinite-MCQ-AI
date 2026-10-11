@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import handler from "./generate";
+import { fetch as handler } from "./generate";
 
 const originalKey = process.env.GEMINI_API_KEY;
 

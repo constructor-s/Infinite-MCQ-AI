@@ -1,4 +1,4 @@
-import type { GeneratedQuestion, OptionId } from "./contracts";
+import type { GeneratedQuestion, OptionId } from "./contracts.js";
 
 const OPTION_IDS: OptionId[] = ["A", "B", "C", "D", "E"];
 

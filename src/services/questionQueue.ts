@@ -15,7 +15,10 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 25_000): Promise<Response> {
+// Allow for a serverless cold start and one malformed-output retry at Gemini.
+// Keep this slightly longer than the function's Vercel execution window so a
+// server response (including a timeout response) wins over a browser abort.
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 65_000): Promise<Response> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   try {

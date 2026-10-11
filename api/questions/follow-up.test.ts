@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { makeQuestion } from "../../src/test/fixtures";
-import handler from "./follow-up";
+import { fetch as handler } from "./follow-up";
 
 const originalKey = process.env.GEMINI_API_KEY;
 

@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { topicsById } from "../data/topics";
+import { topicsById } from "../data/topics.js";
 import {
   generateQuestionRequestSchema,
   generatedQuestionSchema,
@@ -8,8 +8,8 @@ import {
   type GenerateQuestionRequest,
   type GeneratedQuestion,
   type ModelOption
-} from "../lib/contracts";
-import { shuffleQuestionOptions } from "../lib/shuffleQuestion";
+} from "../lib/contracts.js";
+import { shuffleQuestionOptions } from "../lib/shuffleQuestion.js";
 
 export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   {
@@ -60,6 +60,9 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   const ai = new GoogleGenAI({ apiKey });
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    const attemptNumber = attempt + 1;
+    const attemptStartedAt = Date.now();
+    console.info(`[question-generation] Gemini attempt=${attemptNumber} started model=${input.model} topicId=${input.topicId}`);
     try {
       const response = await ai.models.generateContent({
         model: input.model,
@@ -75,6 +78,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       const parsed = generatedQuestionSchema.parse(JSON.parse(response.text));
       validateQuestionQuality(parsed, input.avoidSignatures);
       const randomized = shuffleQuestionOptions(parsed);
+      console.info(`[question-generation] Gemini attempt=${attemptNumber} completed durationMs=${Date.now() - attemptStartedAt}`);
       return {
         ...randomized,
         id: crypto.randomUUID(),
@@ -88,7 +92,10 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       };
     } catch (error) {
       lastError = error;
+      const code = error instanceof GenerationError ? error.code : error instanceof Error ? error.name : "UNKNOWN_ERROR";
+      console.warn(`[question-generation] Gemini attempt=${attemptNumber} failed code=${code} durationMs=${Date.now() - attemptStartedAt}`);
       if (error instanceof GenerationError && error.status < 500) throw error;
+      if (attemptNumber < 2) console.info(`[question-generation] retrying after code=${code}`);
     }
   }
   if (lastError instanceof GenerationError) throw lastError;
