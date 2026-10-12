@@ -7,9 +7,14 @@
     <meta name="description" content="AI-generated MCCQE clinical reasoning practice" />
     <script>
       try {
-        const theme = localStorage.getItem("iworld-theme") === "dark" ? "dark" : "light";
+        const savedTheme = localStorage.getItem("iworld-theme");
+        const preference = savedTheme === "light" || savedTheme === "dark" || savedTheme === "auto" ? savedTheme : "auto";
+        const theme = preference === "auto"
+          ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : preference;
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#111111" : "#ffffff");
       } catch {}
     </script>
     <title>IWorld</title>

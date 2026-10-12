@@ -56,7 +56,7 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
         <fieldset className="appearance-settings">
           <legend>Appearance</legend>
           <div className="theme-options">
-            {(["light", "dark"] as Theme[]).map((option) => (
+            {(["auto", "light", "dark"] as Theme[]).map((option) => (
               <label className="theme-option" key={option}>
                 <input
                   type="radio"
@@ -65,7 +65,7 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
                   checked={theme === option}
                   onChange={() => void onSelectTheme(option)}
                 />
-                <span>{option === "light" ? "Light" : "Dark"}</span>
+                <span>{option === "auto" ? "Auto" : option === "light" ? "Light" : "Dark"}</span>
               </label>
             ))}
           </div>

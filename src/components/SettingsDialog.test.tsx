@@ -7,7 +7,7 @@ describe("SettingsDialog themes", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ models: [] }), { status: 200 })));
   });
 
-  it("shows light and dark choices and reports a theme change", () => {
+  it("shows auto, light, and dark choices and reports a theme change", () => {
     const onSelectTheme = vi.fn(async () => undefined);
     render(
       <SettingsDialog
@@ -20,7 +20,11 @@ describe("SettingsDialog themes", () => {
       />
     );
 
+    expect(screen.getByRole("radio", { name: "Auto" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Light" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Dark" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Auto" }));
+    expect(onSelectTheme).toHaveBeenCalledWith("auto");
     fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
     expect(onSelectTheme).toHaveBeenCalledWith("dark");
   });

@@ -4,13 +4,10 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { StatusBar } from "./components/StatusBar";
 import { studyRepository } from "./db/repository";
 import type { ClinicalQuestion, Encounter, EncounterMode, ModelOption, OptionId, Theme } from "./lib/contracts";
+import { activateTheme, getStoredTheme, normalizeTheme } from "./lib/theme";
 import { ApiError, QUEUE_TARGET, questionQueue, type QueueProgress } from "./services/questionQueue";
 
 const DEFAULT_PROGRESS: QueueProgress = { ready: 0, target: QUEUE_TARGET, generating: false };
-
-function initialTheme(): Theme {
-  return localStorage.getItem("iworld-theme") === "dark" ? "dark" : "light";
-}
 
 export default function App() {
   const [question, setQuestion] = useState<ClinicalQuestion | undefined>(undefined);
@@ -23,7 +20,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelOption["id"]>("gemini-3.5-flash-lite");
-  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [theme, setTheme] = useState<Theme>(getStoredTheme);
   const currentQuestionRef = useRef<ClinicalQuestion | undefined>(undefined);
   const retryTimerRef = useRef<number | undefined>(undefined);
   const retryCountRef = useRef(0);
@@ -31,10 +28,9 @@ export default function App() {
   useEffect(() => { currentQuestionRef.current = question; }, [question]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#111111" : "#ffffff");
-    localStorage.setItem("iworld-theme", theme);
+    const deactivateTheme = activateTheme(theme);
+    try { localStorage.setItem("iworld-theme", theme); } catch { /* Theme still works when storage is unavailable. */ }
+    return deactivateTheme;
   }, [theme]);
 
   const loadNextAvailable = useCallback(async (excludeReviewId?: string) => {
@@ -87,12 +83,12 @@ export default function App() {
     void (async () => {
       const [model, storedTheme, ready] = await Promise.all([
         studyRepository.getSetting<ModelOption["id"]>("selectedModel", "gemini-3.5-flash-lite"),
-        studyRepository.getSetting<Theme>("theme", initialTheme()),
+        studyRepository.getSetting<Theme>("theme", getStoredTheme()),
         studyRepository.getFreshCount()
       ]);
       if (!active) return;
       setSelectedModel(model);
-      setTheme(storedTheme);
+      setTheme(normalizeTheme(storedTheme));
       setProgress({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET && navigator.onLine });
       await loadNextAvailable();
       if (!active) return;
