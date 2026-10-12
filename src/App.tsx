@@ -193,6 +193,8 @@ export default function App() {
         offline={!online}
         reviewMode={mode === "review"}
         error={generationError}
+        questionStartedAt={encounter?.startedAt}
+        questionCompletedAt={encounter?.completedAt}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
