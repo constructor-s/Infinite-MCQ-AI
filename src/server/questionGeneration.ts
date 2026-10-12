@@ -24,7 +24,7 @@ export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   }
 ];
 
-const SYSTEM_INSTRUCTION = `Write one MCCQE-style Canadian clinical reasoning MCQ for a graduating medical student. Use one unambiguously best answer and five plausible options. Keep the vignette focused and clinically consistent. For every option, give a concise misconception hint that guides without naming or quoting the correct answer, plus a concise explanation. Never refer to answer letters in prose because the server reorders the choices. Use SI units when relevant. Do not invent citations. Return only schema-conforming JSON.`;
+const SYSTEM_INSTRUCTION = `Write one MCCQE-style Canadian clinical reasoning MCQ for a graduating medical student. Use one unambiguously best answer and five plausible options. Keep the vignette focused and clinically consistent. For every option, give a concise misconception hint that guides without naming or quoting the correct answer, plus a concise explanation. The highYieldPearl should include a relevant, clinically accepted mnemonic, expanding each letter or component when useful (for example, **SIGECAPS** for a major depressive episode). Never refer to answer letters in prose because the server reorders the choices. Use SI units when relevant. Do not invent citations. Return only schema-conforming JSON.`;
 
 export function makePrompt(input: GenerateQuestionRequest): string {
   const topic = topicsById.get(input.topicId);
