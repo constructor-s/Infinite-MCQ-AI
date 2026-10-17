@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { ClinicalQuestion, Encounter } from "../lib/contracts";
+import type { BlueprintTags } from "../lib/blueprint";
 
 export type QueueItem = {
   id: string;
@@ -17,6 +18,12 @@ export type GenerationEvent = {
   model: string;
   outcome: "success" | "error";
   code?: string;
+  blueprint?: BlueprintTags;
+  blueprintVersion?: string;
+  curriculumVersion?: string;
+  crosswalkVersion?: string;
+  promptVersion?: string;
+  enablingObjectiveId?: string;
 };
 
 export class IWorldDatabase extends Dexie {

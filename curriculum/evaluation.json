@@ -1,0 +1,244 @@
+{
+  "version": "offline-evaluation-v1",
+  "purpose": "Held-out assignment requests and manual rubric. Not imported by prompts or the client.",
+  "calibrationSource": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
+  "rubric": [
+    "The primary decision genuinely tests the assigned cognitive task and physician activity.",
+    "The assigned care dimension is central, not an incidental background fact.",
+    "The scenario fits the selected discipline and source enabling objective.",
+    "Clinical facts, units, management and Canadian legal context are accurate.",
+    "There is exactly one best answer and five plausible, homogeneous choices.",
+    "The vignette is focused prose without a copied exemplar scenario or unavailable image.",
+    "Hints do not disclose the answer; explanations and pearl are accurate."
+  ],
+  "cases": [
+    {
+      "id": "medicine-laboratory_interpretation",
+      "request": {
+        "topicId": "mcc.42-1",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-4",
+        "blueprint": {
+          "discipline": "medicine",
+          "physicianActivity": "assessment_diagnosis",
+          "careDimension": "acute",
+          "cognitiveTask": "laboratory_interpretation",
+          "mccObjectiveIds": [
+            "42-1"
+          ]
+        }
+      }
+    },
+    {
+      "id": "surgery-procedural_intervention",
+      "request": {
+        "topicId": "mcc.1",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-5",
+        "blueprint": {
+          "discipline": "surgery",
+          "physicianActivity": "management",
+          "careDimension": "acute",
+          "cognitiveTask": "procedural_intervention",
+          "mccObjectiveIds": [
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pediatrics-history_priorities",
+      "request": {
+        "topicId": "mcc.21",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-1",
+        "blueprint": {
+          "discipline": "pediatrics",
+          "physicianActivity": "assessment_diagnosis",
+          "careDimension": "chronic",
+          "cognitiveTask": "history_priorities",
+          "mccObjectiveIds": [
+            "21"
+          ]
+        }
+      }
+    },
+    {
+      "id": "obgyn-informed_consent_discussion",
+      "request": {
+        "topicId": "mcc.role:communicator",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-13",
+        "blueprint": {
+          "discipline": "obgyn",
+          "physicianActivity": "communication",
+          "careDimension": "prevention",
+          "cognitiveTask": "informed_consent_discussion",
+          "mccObjectiveIds": [
+            "role:communicator"
+          ]
+        }
+      }
+    },
+    {
+      "id": "psychiatry-capacity_consent",
+      "request": {
+        "topicId": "mcc.21-1",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-6",
+        "blueprint": {
+          "discipline": "psychiatry",
+          "physicianActivity": "professional_behaviours",
+          "careDimension": "psychosocial",
+          "cognitiveTask": "capacity_consent",
+          "mccObjectiveIds": [
+            "21-1"
+          ]
+        }
+      }
+    },
+    {
+      "id": "phelo-evidence_statistical_interpretation",
+      "request": {
+        "topicId": "mcc.78-2",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-7",
+        "blueprint": {
+          "discipline": "phelo",
+          "physicianActivity": "assessment_diagnosis",
+          "careDimension": "prevention",
+          "cognitiveTask": "evidence_statistical_interpretation",
+          "mccObjectiveIds": [
+            "78-2"
+          ]
+        }
+      }
+    },
+    {
+      "id": "medicine-patient_counselling",
+      "request": {
+        "topicId": "mcc.4",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-6",
+        "blueprint": {
+          "discipline": "medicine",
+          "physicianActivity": "communication",
+          "careDimension": "chronic",
+          "cognitiveTask": "patient_counselling",
+          "mccObjectiveIds": [
+            "4"
+          ]
+        }
+      }
+    },
+    {
+      "id": "surgery-difficult_news",
+      "request": {
+        "topicId": "mcc.25",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-1",
+        "blueprint": {
+          "discipline": "surgery",
+          "physicianActivity": "communication",
+          "careDimension": "acute",
+          "cognitiveTask": "difficult_news",
+          "mccObjectiveIds": [
+            "25"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pediatrics-health_literacy",
+      "request": {
+        "topicId": "mcc.role:communicator",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-13",
+        "blueprint": {
+          "discipline": "pediatrics",
+          "physicianActivity": "communication",
+          "careDimension": "psychosocial",
+          "cognitiveTask": "health_literacy",
+          "mccObjectiveIds": [
+            "role:communicator"
+          ]
+        }
+      }
+    },
+    {
+      "id": "obgyn-treatment_choice",
+      "request": {
+        "topicId": "mcc.82",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-5",
+        "blueprint": {
+          "discipline": "obgyn",
+          "physicianActivity": "management",
+          "careDimension": "acute",
+          "cognitiveTask": "treatment_choice",
+          "mccObjectiveIds": [
+            "82"
+          ]
+        }
+      }
+    },
+    {
+      "id": "psychiatry-diagnostic_criteria",
+      "request": {
+        "topicId": "mcc.59-1",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-1",
+        "blueprint": {
+          "discipline": "psychiatry",
+          "physicianActivity": "assessment_diagnosis",
+          "careDimension": "psychosocial",
+          "cognitiveTask": "diagnostic_criteria",
+          "mccObjectiveIds": [
+            "59-1"
+          ]
+        }
+      }
+    },
+    {
+      "id": "phelo-canadian_obligations",
+      "request": {
+        "topicId": "mcc.74-2",
+        "model": "gemini-3.5-flash-lite",
+        "difficulty": 3,
+        "avoidSignatures": [],
+        "enablingObjectiveId": "enabling-3",
+        "blueprint": {
+          "discipline": "phelo",
+          "physicianActivity": "professional_behaviours",
+          "careDimension": "prevention",
+          "cognitiveTask": "canadian_obligations",
+          "mccObjectiveIds": [
+            "74-2"
+          ]
+        }
+      }
+    }
+  ]
+}

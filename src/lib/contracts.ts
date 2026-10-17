@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { blueprintTagsSchema, type BlueprintTags } from "./blueprint.js";
+export type { BlueprintTags } from "./blueprint.js";
 
 export const optionIdSchema = z.enum(["A", "B", "C", "D", "E"]);
 export type OptionId = z.infer<typeof optionIdSchema>;
@@ -14,20 +16,10 @@ export const topicDefinitionSchema = z.object({
 
 export type TopicDefinition = z.infer<typeof topicDefinitionSchema>;
 
-export const generatedQuestionSchema = z.object({
+const questionFieldsSchema = z.object({
   difficulty: z.number().int().min(1).max(5),
-  vignette: z.object({
-    narrative: z.string().min(40),
-    vitalSigns: z.array(z.object({ name: z.string().min(1), value: z.string().min(1) })),
-    physicalExam: z.array(z.string().min(2)),
-    laboratoryResults: z.array(z.object({
-      test: z.string().min(1),
-      value: z.string().min(1),
-      unit: z.string(),
-      referenceRange: z.string()
-    })),
-    investigations: z.array(z.object({ type: z.string().min(1), findings: z.string().min(2) }))
-  }),
+  vignette: z.string().trim().min(40).max(3500),
+  blueprint: blueprintTagsSchema,
   stem: z.string().min(15),
   options: z.array(z.object({
     id: optionIdSchema,
@@ -39,7 +31,9 @@ export const generatedQuestionSchema = z.object({
   shortExplanation: z.string().min(25),
   highYieldPearl: z.string().min(15),
   vignetteSignature: z.string().min(8).max(120)
-}).superRefine((question, ctx) => {
+});
+
+function validateOptions(question: z.infer<typeof questionFieldsSchema>, ctx: z.RefinementCtx) {
   const ids = question.options.map((option) => option.id);
   const texts = question.options.map((option) => option.text.trim().toLowerCase());
   if (new Set(ids).size !== 5 || !["A", "B", "C", "D", "E"].every((id) => ids.includes(id as OptionId))) {
@@ -51,25 +45,37 @@ export const generatedQuestionSchema = z.object({
   if (!ids.includes(question.correctOptionId)) {
     ctx.addIssue({ code: "custom", path: ["correctOptionId"], message: "Correct option must exist" });
   }
-});
+}
+
+export const generatedQuestionSchema = questionFieldsSchema.superRefine(validateOptions);
 
 export type GeneratedQuestion = z.infer<typeof generatedQuestionSchema>;
 
-export const clinicalQuestionSchema = generatedQuestionSchema.and(z.object({
+const questionMetadataSchema = z.object({
   id: z.string().uuid(),
   topicId: z.string(),
   topicTitle: z.string(),
   category: z.string(),
   model: z.string(),
   generatedAt: z.string().datetime(),
-  schemaVersion: z.literal(1),
-  optionOrderVersion: z.literal(1).optional()
-}));
+  optionOrderVersion: z.literal(1)
+});
 
+export const clinicalQuestionSchema = questionFieldsSchema.extend({
+  ...questionMetadataSchema.shape,
+  schemaVersion: z.literal(2),
+  blueprintVersion: z.string().min(1),
+  curriculumVersion: z.string().min(1),
+  crosswalkVersion: z.string().min(1),
+  promptVersion: z.string().min(1),
+  enablingObjectiveId: z.string().min(1)
+}).superRefine(validateOptions);
 export type ClinicalQuestion = z.infer<typeof clinicalQuestionSchema>;
 
 export const generateQuestionRequestSchema = z.object({
   topicId: z.string().min(3),
+  blueprint: blueprintTagsSchema,
+  enablingObjectiveId: z.string().min(1),
   model: z.enum(["gemini-3.5-flash-lite", "gemini-3.8-flash"]),
   difficulty: z.number().int().min(1).max(5).default(3),
   avoidSignatures: z.array(z.string().min(3).max(120)).max(5).default([])
@@ -82,6 +88,7 @@ export type Encounter = {
   id: string;
   questionId: string;
   topicId: string;
+  blueprint: BlueprintTags;
   mode: EncounterMode;
   startedAt: string;
   updatedAt: string;

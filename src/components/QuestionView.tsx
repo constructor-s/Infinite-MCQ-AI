@@ -21,34 +21,7 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
       <section className="question-card" aria-labelledby="question-stem">
         {mode === "review" && <p className="review-label">Review question</p>}
 
-        <div className="vignette">
-          <p className="narrative">{question.vignette.narrative}</p>
-          {question.vignette.vitalSigns.length > 0 && (
-            <ClinicalTable
-              title="Vital signs"
-              headers={["Measurement", "Value"]}
-              rows={question.vignette.vitalSigns.map((item) => [item.name, item.value])}
-            />
-          )}
-          {question.vignette.physicalExam.length > 0 && (
-            <ClinicalList title="Examination" items={question.vignette.physicalExam} />
-          )}
-          {question.vignette.laboratoryResults.length > 0 && (
-            <ClinicalTable
-              title="Laboratory results"
-              headers={["Test", "Result", "Reference range"]}
-              rows={question.vignette.laboratoryResults.map((item) => [item.test, `${item.value} ${item.unit}`.trim(), item.referenceRange])}
-            />
-          )}
-          {question.vignette.investigations.length > 0 && (
-            <div className="clinical-section">
-              <h2>Investigations</h2>
-              {question.vignette.investigations.map((item) => (
-                <p key={`${item.type}-${item.findings}`}><strong>{item.type}:</strong> {item.findings}</p>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="vignette"><p className="narrative">{question.vignette}</p></div>
 
         <h1 id="question-stem" className="stem">{question.stem}</h1>
 
@@ -111,36 +84,5 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
         )}
       </section>
     </main>
-  );
-}
-
-function ClinicalList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className="clinical-section">
-      <h2>{title}</h2>
-      <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
-    </div>
-  );
-}
-
-function ClinicalTable({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
-  return (
-    <section className="clinical-section">
-      <h2>{title}</h2>
-      <div className="table-wrap">
-        <table>
-          <thead><tr>{headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr key={`${row.join("-")}-${rowIndex}`}>
-                {row.map((cell, cellIndex) => cellIndex === 0
-                  ? <th key={`${cell}-${cellIndex}`} scope="row">{cell}</th>
-                  : <td key={`${cell}-${cellIndex}`}>{cell}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
   );
 }

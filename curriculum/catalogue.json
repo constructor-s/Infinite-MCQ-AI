@@ -1,0 +1,2985 @@
+{
+  "version": "mcc-en-2026-10-16-e00d8aecfed7",
+  "retrievedAt": "2026-10-16",
+  "sources": [
+    "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+    "https://mcc.ca/objectives/collaborator/",
+    "https://mcc.ca/objectives/communicator/",
+    "https://mcc.ca/objectives/health-advocate/",
+    "https://mcc.ca/objectives/leader-manager/",
+    "https://mcc.ca/objectives/professional/",
+    "https://mcc.ca/objectives/scholar/"
+  ],
+  "objectives": [
+    {
+      "id": "1",
+      "sourceId": "1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abdominal distension",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "2",
+      "sourceId": "2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abdominal masses and pelvic masses",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "2-4",
+      "sourceId": "2-4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hernia (abdominal wall and groin)",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "3-1",
+      "sourceId": "3-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abdominal pain (children)",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-3",
+        "title": "Abdominal pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "3-2",
+      "sourceId": "3-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Acute abdominal pain",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-3",
+        "title": "Abdominal pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "3-3",
+      "sourceId": "3-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Chronic abdominal pain",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-3",
+        "title": "Abdominal pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "3-4",
+      "sourceId": "3-4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Anorectal pain",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-3",
+        "title": "Abdominal pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "4",
+      "sourceId": "4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Allergic reactions and atopy",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "5",
+      "sourceId": "5",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Attention, learning, and school problems",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "6-1",
+      "sourceId": "6-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Upper gastrointestinal bleeding",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-6",
+        "title": "Blood from gastrointestinal tract"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "6-2",
+      "sourceId": "6-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Lower gastrointestinal bleeding",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-6",
+        "title": "Blood from gastrointestinal tract"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "7",
+      "sourceId": "7",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Blood in sputum (hemoptysis)",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "8",
+      "sourceId": "8",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hematuria",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "9-1",
+      "sourceId": "9-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hypertension",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "9-2",
+      "sourceId": "9-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Shock",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-9",
+        "title": "Blood pressure, abnormal"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "10-1",
+      "sourceId": "10-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Breast masses and enlargement",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "10-2",
+      "sourceId": "10-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Breast discharge",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "11",
+      "sourceId": "11",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Burns",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "12-2",
+      "sourceId": "12-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Calcium disorders",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "13",
+      "sourceId": "13",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Cardiac arrest",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "14",
+      "sourceId": "14",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Chest pain",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "15-1",
+      "sourceId": "15-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Bleeding, bruising",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "15-2",
+      "sourceId": "15-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Prevention of venous thrombosis",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "16-1",
+      "sourceId": "16-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Adult constipation",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-16",
+        "title": "Constipation"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "16-2",
+      "sourceId": "16-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pediatric constipation",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-16",
+        "title": "Constipation"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "17",
+      "sourceId": "17",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Contraception",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "18",
+      "sourceId": "18",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Cough",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "19",
+      "sourceId": "19",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Cyanosis and hypoxia",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "20",
+      "sourceId": "20",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Limp in children",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "21",
+      "sourceId": "21",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Developmental delay",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "21-1",
+      "sourceId": "21-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Adults with developmental disabilities",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "22-1",
+      "sourceId": "22-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Acute diarrhea",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-22",
+        "title": "Diarrhea"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "22-2",
+      "sourceId": "22-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Chronic diarrhea",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-22",
+        "title": "Diarrhea"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "22-3",
+      "sourceId": "22-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pediatric diarrhea",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-22",
+        "title": "Diarrhea"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "23",
+      "sourceId": "23",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Diplopia",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "24",
+      "sourceId": "24",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Dizziness and vertigo",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "25",
+      "sourceId": "25",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Dying patients",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "26",
+      "sourceId": "26",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Dysphagia",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "27",
+      "sourceId": "27",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Dyspnea",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "27-3",
+      "sourceId": "27-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pediatric respiratory distress",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "28",
+      "sourceId": "28",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Ear pain",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "29-1",
+      "sourceId": "29-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Generalized edema",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-29",
+        "title": "Edema/anasarca/ascites"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "29-2",
+      "sourceId": "29-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Localized edema",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-29",
+        "title": "Edema/anasarca/ascites"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "30",
+      "sourceId": "30",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Eye redness",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "31-1",
+      "sourceId": "31-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Frailty in older adults",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "31-2",
+      "sourceId": "31-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Failure to thrive (infant, child)",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "32",
+      "sourceId": "32",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Falls",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "33",
+      "sourceId": "33",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Fatigue",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "35",
+      "sourceId": "35",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Ataxia (gait)",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "36",
+      "sourceId": "36",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Genetic concerns",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "36-2",
+      "sourceId": "36-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Congenital anomalies, dysmorphic features",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "38",
+      "sourceId": "38",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Skin and integument conditions",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "39",
+      "sourceId": "39",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Headache",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "40",
+      "sourceId": "40",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hearing loss",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "41",
+      "sourceId": "41",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Cerebrovascular accident and transient ischemic attack (stroke)",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "42-1",
+      "sourceId": "42-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Anemia",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-42",
+        "title": "Hemoglobin serum, abnormal"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "42-2",
+      "sourceId": "42-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Elevated hemoglobin",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-42",
+        "title": "Hemoglobin serum, abnormal"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "44",
+      "sourceId": "44",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Language and speech disorders",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "45",
+      "sourceId": "45",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Acid-base abnormalities",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "46",
+      "sourceId": "46",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Infertility",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "47-1",
+      "sourceId": "47-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Fecal incontinence",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-47",
+        "title": "Incontinence"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "47-2",
+      "sourceId": "47-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Incontinence, urine, adult",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-47",
+        "title": "Incontinence"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "47-3",
+      "sourceId": "47-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pediatric enuresis",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-47",
+        "title": "Incontinence"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "49",
+      "sourceId": "49",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Jaundice",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "49-1",
+      "sourceId": "49-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Neonatal jaundice",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "50-1",
+      "sourceId": "50-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Oligoarthralgia (pain in one to four joints)",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-50",
+        "title": "Joint pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "50-2",
+      "sourceId": "50-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Polyarthralgia (pain in more than four joints)",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-50",
+        "title": "Joint pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "50-3",
+      "sourceId": "50-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Nonarticular musculoskeletal pain",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-50",
+        "title": "Joint pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "50-4",
+      "sourceId": "50-4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Back pain and related symptoms (e.g., sciatica)",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-50",
+        "title": "Joint pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "50-5",
+      "sourceId": "50-5",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Neck pain",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-50",
+        "title": "Joint pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "51",
+      "sourceId": "51",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abnormal lipids",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "52",
+      "sourceId": "52",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abnormal liver function tests",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "53",
+      "sourceId": "53",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Lump or mass (musculoskeletal)",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "54",
+      "sourceId": "54",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Lymphadenopathy",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "54-1",
+      "sourceId": "54-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Mediastinal mass",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "56-1",
+      "sourceId": "56-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Amenorrhea, oligomenorrhea",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "56-2",
+      "sourceId": "56-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Dysmenorrhea",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "56-3",
+      "sourceId": "56-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Premenstrual dysphoric disorder (premenstrual syndrome, PMS)",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "57",
+      "sourceId": "57",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Menopause",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "58-1",
+      "sourceId": "58-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Coma",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "58-2",
+      "sourceId": "58-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Delirium",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "58-3",
+      "sourceId": "58-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Major or mild neurocognitive disorders (dementia)",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "59-1",
+      "sourceId": "59-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Depressed mood",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-59",
+        "title": "Mood disorders"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "59-2",
+      "sourceId": "59-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Mania / hypomania",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-59",
+        "title": "Mood disorders"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "60",
+      "sourceId": "60",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Oral conditions",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "61",
+      "sourceId": "61",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Movement disorders, involuntary / tic disorders",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "62",
+      "sourceId": "62",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abnormal heart sounds and murmurs",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "63",
+      "sourceId": "63",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Neck masses and thyroid disease",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "64",
+      "sourceId": "64",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Neonatal distress",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "66",
+      "sourceId": "66",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Numbness / tingling / altered sensation",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "67-1-2-1",
+      "sourceId": "67-1-2-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Generalized pain disorders",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-67",
+        "title": "Pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "67-2-2",
+      "sourceId": "67-2-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Central / peripheral neuropathic pain",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-67",
+        "title": "Pain"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "68",
+      "sourceId": "68",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Palpitations",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "69",
+      "sourceId": "69",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Anxiety",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "71-1",
+      "sourceId": "71-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Crying or fussing child",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "71-2",
+      "sourceId": "71-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hypotonic infant",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "73",
+      "sourceId": "73",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pelvic pain",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "74",
+      "sourceId": "74",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Periodic health encounter/preventive health advice",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-74",
+        "title": "Periodic health encounter/preventive health advice"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "74-1",
+      "sourceId": "74-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Newborn assessment",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-74",
+        "title": "Periodic health encounter/preventive health advice"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "74-2",
+      "sourceId": "74-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Immunization",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-74",
+        "title": "Periodic health encounter/preventive health advice"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "74-3",
+      "sourceId": "74-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pre-operative medical evaluation",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-74",
+        "title": "Periodic health encounter/preventive health advice"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "74-5",
+      "sourceId": "74-5",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "The well child and adolescent",
+      "language": "en",
+      "sourceVersion": "May 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-74",
+        "title": "Periodic health encounter/preventive health advice"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "75",
+      "sourceId": "75",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Personality disorders",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "76",
+      "sourceId": "76",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pleural effusion",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "77",
+      "sourceId": "77",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Poisoning",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-1",
+      "sourceId": "78-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Concepts of health and its determinants",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-2",
+      "sourceId": "78-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Assessing and measuring health status at the population level",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-3",
+      "sourceId": "78-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Interventions at the population level",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-4",
+      "sourceId": "78-4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Administration of effective health programs at the population level",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-5",
+      "sourceId": "78-5",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Outbreak management",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-6",
+      "sourceId": "78-6",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Environment",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-8",
+      "sourceId": "78-8",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Work-related health issues",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-9",
+      "sourceId": "78-9",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Indigenous health",
+      "language": "en",
+      "sourceVersion": "April 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-10",
+      "sourceId": "78-10",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Disaster preparedness, emergency response, and recovery",
+      "language": "en",
+      "sourceVersion": "April 2021",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-11",
+      "sourceId": "78-11",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Health and the climate crisis",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-12",
+      "sourceId": "78-12",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Quality improvement and patient safety",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "78-13",
+      "sourceId": "78-13",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Black Health",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "79-1",
+      "sourceId": "79-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hyperkalemia",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-79",
+        "title": "Potassium concentration abnormal, serum"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "79-2",
+      "sourceId": "79-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hypokalemia",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-79",
+        "title": "Potassium concentration abnormal, serum"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "80-1",
+      "sourceId": "80-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Prenatal care",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "80-2",
+      "sourceId": "80-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Intrapartum and postpartum care",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "81",
+      "sourceId": "81",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Early pregnancy loss / spontaneous abortion",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "82",
+      "sourceId": "82",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Preterm labour",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "83",
+      "sourceId": "83",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Uterine prolapse, pelvic relaxation",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "84",
+      "sourceId": "84",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Proteinuria",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "85",
+      "sourceId": "85",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Pruritus",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "86",
+      "sourceId": "86",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Psychosis",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "89-1",
+      "sourceId": "89-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Acute kidney injury (anuria or oliguria)",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-89",
+        "title": "Renal failure"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "89-2",
+      "sourceId": "89-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Chronic kidney disease",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-89",
+        "title": "Renal failure"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "90",
+      "sourceId": "90",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Scrotal mass",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "91",
+      "sourceId": "91",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Scrotal pain",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "92",
+      "sourceId": "92",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Seizures / epilepsy",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "93-1",
+      "sourceId": "93-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abnormal pubertal development",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "94",
+      "sourceId": "94",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Sexual Dysfunctions and Disorders",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "94-1",
+      "sourceId": "94-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Gender and sexuality",
+      "language": "en",
+      "sourceVersion": "April 2019",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "97-2",
+      "sourceId": "97-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Urticaria, angioedema",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "98",
+      "sourceId": "98",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Sleep-wake disorders",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "99-1",
+      "sourceId": "99-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hypernatremia",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-99",
+        "title": "Sodium concentration abnormal, serum"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "99-2",
+      "sourceId": "99-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hyponatremia",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-99",
+        "title": "Sodium concentration abnormal, serum"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "100",
+      "sourceId": "100",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Sore throat and/or rhinorrhea",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "101",
+      "sourceId": "101",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Stature abnormal (tall stature / short stature)",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "102",
+      "sourceId": "102",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Strabismus and/or amblyopia",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "103",
+      "sourceId": "103",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Substance use or addictive disorders",
+      "language": "en",
+      "sourceVersion": "April 2019",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "103-1",
+      "sourceId": "103-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Substance withdrawal",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "104",
+      "sourceId": "104",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Sudden infant death syndrome (SIDS)",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "104-1",
+      "sourceId": "104-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Brief resolved unexplained event (BRUE) (previously known as apparent life-threatening event [ALTE])",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "105",
+      "sourceId": "105",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Suicidal behaviour",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "106",
+      "sourceId": "106",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Syncope and pre-syncope",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "107-1",
+      "sourceId": "107-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Fever and hyperthermia",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-107",
+        "title": "Temperature abnormal/fever and/or chills"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "107-4",
+      "sourceId": "107-4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Fever in the immune compromised host / recurrent fever",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-107",
+        "title": "Temperature abnormal/fever and/or chills"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "107-5",
+      "sourceId": "107-5",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hypothermia and cold-related injury",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-107",
+        "title": "Temperature abnormal/fever and/or chills"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "108",
+      "sourceId": "108",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Tinnitus",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109",
+      "sourceId": "109",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Trauma",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-1",
+      "sourceId": "109-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abdominal injuries",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-3",
+      "sourceId": "109-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Bone or joint injury",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-4",
+      "sourceId": "109-4",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Chest injuries",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-6",
+      "sourceId": "109-6",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Drowning/Submersion Injuries",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-8",
+      "sourceId": "109-8",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Facial injuries",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-10",
+      "sourceId": "109-10",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Traumatic brain injury",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-11",
+      "sourceId": "109-11",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Nerve injury",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-12",
+      "sourceId": "109-12",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Skin wounds",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-13",
+      "sourceId": "109-13",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Spinal trauma",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-14",
+      "sourceId": "109-14",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Urinary tract injuries",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "109-15",
+      "sourceId": "109-15",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Vascular injury",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-109",
+        "title": "Trauma"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "110-1",
+      "sourceId": "110-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Dysuria, urinary frequency and urgency, and/or pyuria",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "110-2",
+      "sourceId": "110-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Polyuria",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "111-1",
+      "sourceId": "111-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Lower urinary tract symptoms",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "112",
+      "sourceId": "112",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Vaginal bleeding, excessive/irregular/abnormal",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "113",
+      "sourceId": "113",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Vaginal discharge / vulvar pruritus",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "114-1",
+      "sourceId": "114-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Child Abuse",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-114",
+        "title": "Violence, family"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "114-2",
+      "sourceId": "114-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Abuse of older adults",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-114",
+        "title": "Violence, family"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "114-3",
+      "sourceId": "114-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Adult Abuse",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-114",
+        "title": "Violence, family"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "115-1",
+      "sourceId": "115-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Acute visual disturbance / loss",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-115",
+        "title": "Visual disturbance/loss"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "115-2",
+      "sourceId": "115-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Chronic visual disturbance / loss",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-115",
+        "title": "Visual disturbance/loss"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "116",
+      "sourceId": "116",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Vomiting and/or nausea",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "117",
+      "sourceId": "117",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Weakness (not caused by cerebrovascular accident)",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "118-1",
+      "sourceId": "118-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Obesity",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-118",
+        "title": "Weight, abnormal"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "118-2",
+      "sourceId": "118-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Weight loss / eating disorders / anorexia",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-118",
+        "title": "Weight, abnormal"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "118-3",
+      "sourceId": "118-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Intrauterine growth restriction",
+      "language": "en",
+      "sourceVersion": "January 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-118",
+        "title": "Weight, abnormal"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "120",
+      "sourceId": "120",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "White blood cells, abnormalities of",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "121-1",
+      "sourceId": "121-1",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Consent",
+      "language": "en",
+      "sourceVersion": "April 2024",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-121",
+        "title": "Legal, ethical and organizational aspects of medicine"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "121-2",
+      "sourceId": "121-2",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Truth telling",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-121",
+        "title": "Legal, ethical and organizational aspects of medicine"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "121-3",
+      "sourceId": "121-3",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Negligence",
+      "language": "en",
+      "sourceVersion": "March 2026",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-121",
+        "title": "Legal, ethical and organizational aspects of medicine"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "121-5",
+      "sourceId": "121-5",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Legal system",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-121",
+        "title": "Legal, ethical and organizational aspects of medicine"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "123",
+      "sourceId": "123",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Obsessive-compulsive (OCD) and related disorders",
+      "language": "en",
+      "sourceVersion": "February 2017",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "124",
+      "sourceId": "124",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Somatic symptoms and related disorders",
+      "language": "en",
+      "sourceVersion": "April 2021",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "125",
+      "sourceId": "125",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Prescribing practices",
+      "language": "en",
+      "sourceVersion": "April 2021",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "126",
+      "sourceId": "126",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Clinical informatics",
+      "language": "en",
+      "sourceVersion": "March 2022",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "127",
+      "sourceId": "127",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Providing anti-oppressive health care",
+      "language": "en",
+      "sourceVersion": "March 2023",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "Group-78",
+        "title": "Population health and its determinants"
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "128",
+      "sourceId": "128",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Psychological trauma",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "129",
+      "sourceId": "129",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hypoglycemia",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "130",
+      "sourceId": "130",
+      "identifierKind": "official",
+      "role": "expert",
+      "title": "Hyperglycemia",
+      "language": "en",
+      "sourceVersion": "March 2025",
+      "sourceUrl": "https://mcc.ca/wp-json/mcc/medical-expert/en/?type=json&content=true",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "role:collaborator",
+      "sourceId": null,
+      "identifierKind": "source_url_derived",
+      "role": "collaborator",
+      "title": "Collaborator",
+      "language": "en",
+      "sourceVersion": null,
+      "sourceUrl": "https://mcc.ca/objectives/collaborator/",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "role:communicator",
+      "sourceId": null,
+      "identifierKind": "source_url_derived",
+      "role": "communicator",
+      "title": "Communicator",
+      "language": "en",
+      "sourceVersion": null,
+      "sourceUrl": "https://mcc.ca/objectives/communicator/",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "role:health-advocate",
+      "sourceId": null,
+      "identifierKind": "source_url_derived",
+      "role": "health-advocate",
+      "title": "Health Advocate",
+      "language": "en",
+      "sourceVersion": null,
+      "sourceUrl": "https://mcc.ca/objectives/health-advocate/",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "role:leader-manager",
+      "sourceId": null,
+      "identifierKind": "source_url_derived",
+      "role": "leader-manager",
+      "title": "Leader Manager",
+      "language": "en",
+      "sourceVersion": null,
+      "sourceUrl": "https://mcc.ca/objectives/leader-manager/",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "role:professional",
+      "sourceId": null,
+      "identifierKind": "source_url_derived",
+      "role": "professional",
+      "title": "Professional",
+      "language": "en",
+      "sourceVersion": null,
+      "sourceUrl": "https://mcc.ca/objectives/professional/",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    },
+    {
+      "id": "role:scholar",
+      "sourceId": null,
+      "identifierKind": "source_url_derived",
+      "role": "scholar",
+      "title": "Scholar",
+      "language": "en",
+      "sourceVersion": null,
+      "sourceUrl": "https://mcc.ca/objectives/scholar/",
+      "group": {
+        "id": "",
+        "title": ""
+      },
+      "retrievedAt": "2026-10-16"
+    }
+  ]
+}

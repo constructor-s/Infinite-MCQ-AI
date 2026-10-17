@@ -1,0 +1,875 @@
+{
+  "version": "original-style-exemplars-v1",
+  "provenance": "Application-authored original examples calibrated to the paragraph stems and single-best-answer style of MCCQE practice questions 2026. These are not MCC items.",
+  "styleSource": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
+  "tasks": {
+    "most_likely_diagnosis": [
+      {
+        "id": "most_likely_diagnosis-1",
+        "vignette": "A teenager has abrupt unilateral scrotal pain, vomiting, and an elevated testis with an absent cremasteric reflex.",
+        "stem": "Which diagnosis best explains these findings?",
+        "options": [
+          "Testicular torsion",
+          "Epididymitis",
+          "Hydrocele",
+          "Varicocele",
+          "Inguinal lymphadenitis"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "most_likely_diagnosis-2",
+        "vignette": "An adult has recurrent vertigo lasting seconds when rolling over in bed, without hearing loss or focal neurologic findings.",
+        "stem": "Which diagnosis is most likely?",
+        "options": [
+          "Benign paroxysmal positional vertigo",
+          "Vestibular neuritis",
+          "Ménière disease",
+          "Vestibular schwannoma",
+          "Cerebellar infarction"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "differential_diagnosis": [
+      {
+        "id": "differential_diagnosis-1",
+        "vignette": "An older adult develops fluctuating inattention over one day during a urinary infection. Their cognition was previously normal.",
+        "stem": "Which diagnosis best distinguishes this presentation from dementia?",
+        "options": [
+          "Delirium",
+          "Alzheimer disease",
+          "Frontotemporal dementia",
+          "Persistent depressive disorder",
+          "Normal aging"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "differential_diagnosis-2",
+        "vignette": "A child has a barking cough and inspiratory stridor after a viral prodrome, without drooling or a toxic appearance.",
+        "stem": "Which diagnosis best fits the distinguishing findings?",
+        "options": [
+          "Croup",
+          "Epiglottitis",
+          "Retropharyngeal abscess",
+          "Foreign-body aspiration",
+          "Bacterial tracheitis"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "history_priorities": [
+      {
+        "id": "history_priorities-1",
+        "vignette": "A young adult has episodic wheezing that improves on weekends and recurs during shifts at a bakery.",
+        "stem": "Which additional history would most clarify the cause?",
+        "options": [
+          "Relationship of symptoms to flour exposure",
+          "Childhood ear infections",
+          "Daily water intake",
+          "Family history of migraine",
+          "Previous ankle injuries"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "history_priorities-2",
+        "vignette": "A patient has presyncope on standing and recently started a new medication for urinary symptoms.",
+        "stem": "Which history detail is most useful diagnostically?",
+        "options": [
+          "Timing of symptoms relative to starting the medication",
+          "Preferred sleeping position",
+          "Past childhood fractures",
+          "Dietary fibre intake",
+          "Use of corrective lenses"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "physical_exam_interpretation": [
+      {
+        "id": "physical_exam_interpretation-1",
+        "vignette": "An adult with breathlessness has unilateral reduced breath sounds, reduced chest expansion, and stony dullness to percussion at the right base.",
+        "stem": "What do these examination findings most strongly suggest?",
+        "options": [
+          "Pleural effusion",
+          "Pneumothorax",
+          "Asthma",
+          "Pulmonary embolism",
+          "Hyperventilation"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "physical_exam_interpretation-2",
+        "vignette": "A patient with leg swelling has elevated jugular venous pressure that increases with abdominal pressure.",
+        "stem": "What does this finding most strongly indicate?",
+        "options": [
+          "Elevated right-sided filling pressure",
+          "Isolated venous insufficiency",
+          "Hypovolemia",
+          "Normal cardiac filling pressure",
+          "Isolated lymphatic obstruction"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "diagnostic_investigation": [
+      {
+        "id": "diagnostic_investigation-1",
+        "vignette": "A stable adult has progressive solid-food dysphagia and unintentional weight loss over several months.",
+        "stem": "Which investigation is most appropriate to establish the diagnosis?",
+        "options": [
+          "Upper gastrointestinal endoscopy with biopsy",
+          "Stool culture",
+          "Serum amylase",
+          "Abdominal radiography",
+          "Hydrogen breath testing"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "diagnostic_investigation-2",
+        "vignette": "A nonpregnant adult has polyuria and polydipsia without acute illness or previously measured blood glucose.",
+        "stem": "Which investigation most directly evaluates the suspected diagnosis?",
+        "options": [
+          "Plasma glucose measurement",
+          "Serum cortisol suppression test",
+          "Urine culture",
+          "Renal ultrasonography",
+          "Serum prolactin"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "laboratory_interpretation": [
+      {
+        "id": "laboratory_interpretation-1",
+        "vignette": "An adult with fatigue has hemoglobin 94 g/L, mean corpuscular volume 70 fL, ferritin 6 micrograms/L, and an elevated total iron-binding capacity.",
+        "stem": "Which interpretation best fits these laboratory findings?",
+        "options": [
+          "Iron deficiency anemia",
+          "Vitamin B12 deficiency",
+          "Anemia of chronic inflammation",
+          "Autoimmune hemolysis",
+          "Aplastic anemia"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "laboratory_interpretation-2",
+        "vignette": "A patient has pH 7.28, bicarbonate 14 mmol/L, and sodium 140 and chloride 103 mmol/L.",
+        "stem": "What is the primary acid-base disturbance?",
+        "options": [
+          "High anion gap metabolic acidosis",
+          "Normal anion gap metabolic acidosis",
+          "Metabolic alkalosis",
+          "Primary respiratory acidosis",
+          "Primary respiratory alkalosis"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "imaging_interpretation": [
+      {
+        "id": "imaging_interpretation-1",
+        "vignette": "After a fall, an older adult has hip pain. Radiographs show a fracture line through the femoral neck, proximal to the greater and lesser trochanters.",
+        "stem": "Which fracture location is shown by this description?",
+        "options": [
+          "Intracapsular femoral neck",
+          "Intertrochanteric",
+          "Subtrochanteric",
+          "Femoral shaft",
+          "Isolated greater trochanter"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "imaging_interpretation-2",
+        "vignette": "An adult has sudden pleuritic pain. Chest radiography shows a visible visceral pleural line with no lung markings peripheral to it.",
+        "stem": "What does this radiographic finding indicate?",
+        "options": [
+          "Pneumothorax",
+          "Pleural effusion",
+          "Lobar consolidation",
+          "Pulmonary edema",
+          "Lung abscess"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "ecg_interpretation": [
+      {
+        "id": "ecg_interpretation-1",
+        "vignette": "An adult with palpitations has an ECG showing an irregularly irregular narrow-complex rhythm at 130/min, without discrete P waves.",
+        "stem": "Which rhythm is demonstrated?",
+        "options": [
+          "Atrial fibrillation",
+          "Sinus tachycardia",
+          "Atrial flutter with fixed conduction",
+          "Ventricular tachycardia",
+          "First-degree atrioventricular block"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "ecg_interpretation-2",
+        "vignette": "An asymptomatic adult has a regular ECG at 70/min with a P wave before each QRS and a constant PR interval of 240 ms.",
+        "stem": "Which conduction finding is present?",
+        "options": [
+          "First-degree atrioventricular block",
+          "Mobitz I block",
+          "Mobitz II block",
+          "Complete heart block",
+          "Pre-excitation"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "diagnostic_criteria": [
+      {
+        "id": "diagnostic_criteria-1",
+        "vignette": "An adult has depressed mood, anhedonia, insomnia, low energy, poor concentration, guilt, and impaired function daily for three weeks, without mania or substance exposure.",
+        "stem": "Which diagnosis is supported by the symptom duration and number?",
+        "options": [
+          "Major depressive episode",
+          "Persistent depressive disorder",
+          "Normal grief",
+          "Cyclothymia",
+          "Hypomanic episode"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "diagnostic_criteria-2",
+        "vignette": "An adult has excessive difficult-to-control worry across several domains with restlessness, fatigue, poor concentration, and sleep disturbance for eight months.",
+        "stem": "Which disorder is supported by these diagnostic features?",
+        "options": [
+          "Generalized anxiety disorder",
+          "Panic disorder",
+          "Acute stress disorder",
+          "Specific phobia",
+          "Obsessive-compulsive disorder"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "risk_stratification": [
+      {
+        "id": "risk_stratification-1",
+        "vignette": "An adult has suspected upper gastrointestinal bleeding with systolic pressure 85 mm Hg, tachycardia, and syncope.",
+        "stem": "How should the immediate clinical risk be classified?",
+        "options": [
+          "High risk because of hemodynamic instability",
+          "Low risk because bleeding is unconfirmed",
+          "Low risk because age is unspecified",
+          "No risk before endoscopy",
+          "Risk determined solely by hemoglobin"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "risk_stratification-2",
+        "vignette": "A postoperative patient has new dyspnea, unilateral leg swelling, tachycardia, and no more likely alternative diagnosis.",
+        "stem": "How do these findings affect the pretest probability of pulmonary embolism?",
+        "options": [
+          "They increase the pretest probability",
+          "They exclude pulmonary embolism",
+          "They establish a low probability",
+          "They make the probability zero",
+          "They confirm embolism without testing"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "evidence_statistical_interpretation": [
+      {
+        "id": "evidence_statistical_interpretation-1",
+        "vignette": "Among 100 patients with disease, a test is positive in 90. Among 100 patients without disease, it is negative in 80.",
+        "stem": "What is the sensitivity of this test?",
+        "options": [
+          "90%",
+          "80%",
+          "10%",
+          "20%",
+          "85%"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "evidence_statistical_interpretation-2",
+        "vignette": "A trial finds an outcome in 10% of treated participants and 15% of controls over two years.",
+        "stem": "What is the absolute risk reduction over two years?",
+        "options": [
+          "5 percentage points",
+          "33 percentage points",
+          "50 percentage points",
+          "10 percentage points",
+          "1.5 percentage points"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "initial_stabilization": [
+      {
+        "id": "initial_stabilization-1",
+        "vignette": "After eating nuts, an adult has wheezing, generalized urticaria, and blood pressure 75/40 mm Hg.",
+        "stem": "Which immediate treatment is most appropriate?",
+        "options": [
+          "Intramuscular epinephrine",
+          "Oral antihistamine alone",
+          "Inhaled corticosteroid alone",
+          "Oral antibiotic",
+          "Delayed outpatient allergy testing"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "initial_stabilization-2",
+        "vignette": "A newborn remains apneic with a heart rate of 80/min after warming, positioning, drying, and stimulation.",
+        "stem": "Which immediate intervention is indicated?",
+        "options": [
+          "Positive-pressure ventilation",
+          "Chest compressions before ventilation",
+          "Oral feeding",
+          "Observation alone",
+          "Discharge with follow-up"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "treatment_choice": [
+      {
+        "id": "treatment_choice-1",
+        "vignette": "A healthy nonpregnant adult has uncomplicated cystitis without fever or flank pain and with normal renal function.",
+        "stem": "Which treatment is appropriate?",
+        "options": [
+          "Nitrofurantoin",
+          "Oseltamivir",
+          "Metronidazole alone",
+          "Topical hydrocortisone",
+          "Fluconazole"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "treatment_choice-2",
+        "vignette": "An adult has a first episode of a mild depressive illness and prefers a psychological treatment. There is no suicidality or psychosis.",
+        "stem": "Which treatment is a reasonable initial choice?",
+        "options": [
+          "Cognitive behavioural therapy",
+          "Electroconvulsive therapy as the only choice",
+          "Long-term benzodiazepine monotherapy",
+          "Antipsychotic monotherapy",
+          "Stimulant monotherapy"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "pharmacology_contraindications": [
+      {
+        "id": "pharmacology_contraindications-1",
+        "vignette": "A patient taking sildenafil asks about using nitroglycerin for chest discomfort.",
+        "stem": "Which adverse interaction is most concerning?",
+        "options": [
+          "Profound hypotension",
+          "Severe hypercalcemia",
+          "Hemolytic anemia",
+          "Ototoxicity",
+          "Urinary retention"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "pharmacology_contraindications-2",
+        "vignette": "A pregnant patient at ten weeks takes an angiotensin-converting enzyme inhibitor for hypertension.",
+        "stem": "Which medication requires replacement because of fetal risk?",
+        "options": [
+          "Angiotensin-converting enzyme inhibitor",
+          "Folic acid",
+          "Prenatal iron",
+          "Pyridoxine",
+          "Doxylamine"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "procedural_intervention": [
+      {
+        "id": "procedural_intervention-1",
+        "vignette": "An adult has a fluctuant cutaneous abscess with surrounding tenderness and no systemic instability.",
+        "stem": "Which procedure provides source control?",
+        "options": [
+          "Incision and drainage",
+          "Primary closure without drainage",
+          "Skin grafting",
+          "Arterial embolectomy",
+          "Lumbar puncture"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "procedural_intervention-2",
+        "vignette": "A patient has fever and an obstructing ureteral stone with hydronephrosis despite initial antibiotics and resuscitation.",
+        "stem": "Which intervention is needed for source control?",
+        "options": [
+          "Urgent urinary drainage",
+          "Elective cystoscopy in six months",
+          "Observation until fever resolves",
+          "Appendectomy",
+          "Routine bladder training"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "long_term_management": [
+      {
+        "id": "long_term_management-1",
+        "vignette": "An adult with persistent asthma uses a reliever frequently and has recurrent night symptoms over several months.",
+        "stem": "Which ongoing strategy best addresses airway inflammation?",
+        "options": [
+          "An inhaled corticosteroid-containing regimen",
+          "Antibiotics indefinitely",
+          "A reliever alone without reassessment",
+          "Avoidance of all exercise",
+          "Long-term oral antihistamine alone"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "long_term_management-2",
+        "vignette": "An adult with stable opioid use disorder requests maintenance treatment and has no contraindications.",
+        "stem": "Which ongoing treatment can reduce overdose risk?",
+        "options": [
+          "Opioid agonist treatment",
+          "Repeated detoxification without maintenance support",
+          "Benzodiazepine monotherapy",
+          "Stimulant monotherapy",
+          "No follow-up after withdrawal"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "follow_up_monitoring": [
+      {
+        "id": "follow_up_monitoring-1",
+        "vignette": "An adult starts an angiotensin-converting enzyme inhibitor for hypertension and has stable baseline kidney function.",
+        "stem": "Which laboratory values should be reassessed after initiation?",
+        "options": [
+          "Creatinine and potassium",
+          "Amylase and lipase",
+          "Prolactin and cortisol",
+          "Ferritin and folate",
+          "Bilirubin and alkaline phosphatase"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "follow_up_monitoring-2",
+        "vignette": "A patient starts lithium for bipolar disorder and returns for planned medication monitoring.",
+        "stem": "Which measurement is essential to guide safe dosing?",
+        "options": [
+          "Serum lithium concentration",
+          "Serum troponin",
+          "Urine ketones",
+          "Serum amylase",
+          "Plasma ammonia"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "disposition_escalation": [
+      {
+        "id": "disposition_escalation-1",
+        "vignette": "A young infant has fever, poor feeding, lethargy, and delayed capillary refill in a community clinic.",
+        "stem": "Which disposition is most appropriate?",
+        "options": [
+          "Immediate hospital assessment",
+          "Routine review in one month",
+          "Discharge without safety advice",
+          "Telephone review next week",
+          "Return only if a rash develops"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "disposition_escalation-2",
+        "vignette": "An adult with depression describes a specific suicide plan, access to the means, and inability to remain safe at home.",
+        "stem": "Which level of care is most appropriate now?",
+        "options": [
+          "Urgent supervised emergency psychiatric assessment",
+          "Routine appointment in three months",
+          "Unsupervised discharge",
+          "Medication refill without assessment",
+          "Written advice alone"
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "patient_counselling": [
+      {
+        "id": "patient_counselling-1",
+        "vignette": "A patient newly diagnosed with hypertension asks why treatment matters when they feel well.",
+        "stem": "Which explanation is most appropriate?",
+        "options": [
+          "Treatment lowers future stroke and heart disease risk even without symptoms.",
+          "You need treatment only when you feel a headache.",
+          "Feeling well proves there is no risk.",
+          "Medication guarantees you will never have a stroke.",
+          "Blood pressure has no effect on kidney health."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "patient_counselling-2",
+        "vignette": "A parent asks whether antibiotics will help a child with an uncomplicated viral upper respiratory infection.",
+        "stem": "Which explanation is most appropriate?",
+        "options": [
+          "Antibiotics do not treat viruses, and we can discuss symptom relief and warning signs.",
+          "All coughs need antibiotics.",
+          "Antibiotics prevent every complication.",
+          "There is no need to discuss warning signs.",
+          "The infection will always persist without antibiotics."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "informed_consent_discussion": [
+      {
+        "id": "informed_consent_discussion-1",
+        "vignette": "A competent patient is considering elective surgery and asks what they should understand before deciding.",
+        "stem": "Which discussion best supports informed consent?",
+        "options": [
+          "Discuss benefits, material risks, alternatives, and the option of no treatment.",
+          "Discuss only the expected benefit.",
+          "Ask for a signature before answering questions.",
+          "Describe only rare risks unrelated to the choice.",
+          "Ask the family to decide without involving the patient."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "informed_consent_discussion-2",
+        "vignette": "A patient is offered a medication with two reasonable alternatives and wants help understanding the choice.",
+        "stem": "Which response best supports an informed decision?",
+        "options": [
+          "Explain the expected benefits, relevant harms, and alternatives in understandable terms.",
+          "Say that questions will delay treatment unnecessarily.",
+          "Present a consent form without explanation.",
+          "Describe the treatment as risk-free.",
+          "Discuss only the most expensive alternative."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "shared_decision_making": [
+      {
+        "id": "shared_decision_making-1",
+        "vignette": "Two treatments offer similar clinical benefit but differ in recovery time. The patient is a caregiver and worries about time away from home.",
+        "stem": "Which response best supports shared decision-making?",
+        "options": [
+          "Ask how recovery demands fit the patient’s priorities and compare the options together.",
+          "Choose without discussing the patient’s priorities.",
+          "Assume all caregivers prefer the shortest procedure.",
+          "Ask the family to decide in the patient’s absence.",
+          "Refuse to discuss either option."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "shared_decision_making-2",
+        "vignette": "An adult eligible for a screening intervention wants to weigh its benefits against false-positive results.",
+        "stem": "Which response best supports a shared choice?",
+        "options": [
+          "Discuss likely benefits and harms and ask what matters most to the patient.",
+          "State that everyone must make the same choice.",
+          "Dismiss concerns about false positives.",
+          "Ask for agreement before explaining the options.",
+          "Provide only a technical guideline without discussion."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "difficult_news": [
+      {
+        "id": "difficult_news-1",
+        "vignette": "A patient has just learned that biopsy results show cancer and becomes silent and tearful.",
+        "stem": "Which response is most appropriate?",
+        "options": [
+          "I can see this is a lot to take in. What is going through your mind?",
+          "There is no reason to be upset.",
+          "Let us finish the paperwork first.",
+          "You should focus only on being positive.",
+          "Everyone reacts this way, so let us move on."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "difficult_news-2",
+        "vignette": "A parent is told that their child has a serious chronic illness and asks for a moment.",
+        "stem": "Which response is most appropriate?",
+        "options": [
+          "Take the time you need. I will stay here and answer questions when you are ready.",
+          "We must finish all details immediately.",
+          "You should have expected this result.",
+          "Other families have worse news.",
+          "Let us avoid discussing feelings."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "health_literacy": [
+      {
+        "id": "health_literacy-1",
+        "vignette": "A patient nods during instructions for a new inhaler but appears unsure how to use it.",
+        "stem": "Which response best checks understanding?",
+        "options": [
+          "Please show me how you will use the inhaler so I can check how clearly I explained it.",
+          "Do you understand everything?",
+          "Read the technical manual before asking questions.",
+          "Your nod means the instructions are clear.",
+          "Ask someone else to explain it later."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "health_literacy-2",
+        "vignette": "A patient with limited English proficiency needs to discuss a new diagnosis, and a young child offers to translate.",
+        "stem": "Which communication strategy is most appropriate?",
+        "options": [
+          "Arrange a qualified medical interpreter.",
+          "Ask the child to interpret all sensitive information.",
+          "Speak louder without interpretation.",
+          "Skip questions requiring explanation.",
+          "Assume written English instructions are sufficient."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "treatment_barriers": [
+      {
+        "id": "treatment_barriers-1",
+        "vignette": "A patient with diabetes has missed several doses and says food and rent costs have increased.",
+        "stem": "Which response best explores the treatment barrier?",
+        "options": [
+          "Can we talk about the cost of your medicines and what options might make them easier to obtain?",
+          "Why are you being noncompliant?",
+          "You must choose medicines instead of food.",
+          "I will assume you no longer want treatment.",
+          "There are no alternatives worth discussing."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "treatment_barriers-2",
+        "vignette": "A patient misses appointments and explains that bus service was cut in their neighbourhood.",
+        "stem": "Which response is most appropriate?",
+        "options": [
+          "Let us explore transport or appointment options that could work for you.",
+          "Missing visits proves you do not value your health.",
+          "You should move immediately.",
+          "I will stop care without discussion.",
+          "Transport cannot affect access to care."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "ethics": [
+      {
+        "id": "ethics-1",
+        "vignette": "A capable adult declines a recommended transfusion after understanding its risks, benefits, and alternatives.",
+        "stem": "Which ethical principle most directly supports respecting this refusal?",
+        "options": [
+          "Autonomy",
+          "Paternalism",
+          "Futility",
+          "Distributive justice alone",
+          "Physician preference"
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "ethics-2",
+        "vignette": "Two patients have equal clinical need for a scarce resource and no relevant prognostic difference.",
+        "stem": "Which allocation approach is ethically preferable?",
+        "options": [
+          "Use a transparent, fair process based on relevant criteria.",
+          "Prioritize personal acquaintances.",
+          "Base access on social prestige.",
+          "Accept payment for priority.",
+          "Choose according to personal approval of lifestyle."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "confidentiality": [
+      {
+        "id": "confidentiality-1",
+        "vignette": "An adult patient’s employer requests diagnostic details without consent or a legal requirement for disclosure.",
+        "stem": "Which professional action is most appropriate?",
+        "options": [
+          "Seek the patient’s consent before releasing relevant information.",
+          "Send the complete chart automatically.",
+          "Disclose details to any manager who asks.",
+          "Post the diagnosis in a workplace notice.",
+          "Assume employment implies consent."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "confidentiality-2",
+        "vignette": "A capable adult asks that their diagnosis not be shared with a relative who calls the clinic. There is no applicable exception to confidentiality.",
+        "stem": "Which action is appropriate?",
+        "options": [
+          "Maintain confidentiality and discuss consent with the patient if needed.",
+          "Release the chart because the caller is family.",
+          "Confirm all details over the telephone.",
+          "Ask reception to share the diagnosis.",
+          "Assume all relatives are substitute decision-makers."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "capacity_consent": [
+      {
+        "id": "capacity_consent-1",
+        "vignette": "An adult refuses surgery but can understand the information, appreciate the consequences, reason about the options, and communicate a choice.",
+        "stem": "Which conclusion is most appropriate?",
+        "options": [
+          "Disagreement alone does not establish incapacity.",
+          "Refusal automatically proves incapacity.",
+          "The surgeon becomes the substitute decision-maker.",
+          "A family objection overrides the capable patient.",
+          "Any risky choice invalidates consent."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "capacity_consent-2",
+        "vignette": "A patient with a dementia diagnosis accurately explains a proposed simple treatment, its consequences, and their consistent choice.",
+        "stem": "Which statement about capacity is most appropriate?",
+        "options": [
+          "Capacity is decision-specific and cannot be inferred solely from the diagnosis.",
+          "Dementia always removes capacity for every decision.",
+          "Age alone determines capacity.",
+          "Family members always decide instead.",
+          "Capacity requires agreeing with the physician."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "professional_boundaries": [
+      {
+        "id": "professional_boundaries-1",
+        "vignette": "A physician is asked to prescribe long-term controlled medication to a close friend outside a therapeutic relationship.",
+        "stem": "Which action best maintains professional boundaries?",
+        "options": [
+          "Arrange independent clinical assessment through an appropriate treating clinician.",
+          "Prescribe indefinitely without assessment.",
+          "Use a false patient name.",
+          "Accept a gift in exchange for prescribing.",
+          "Document the prescription only in a personal notebook."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "professional_boundaries-2",
+        "vignette": "A current patient asks their physician to begin a romantic relationship.",
+        "stem": "Which professional response is most appropriate?",
+        "options": [
+          "Maintain the professional boundary and decline the relationship.",
+          "Agree if appointments continue.",
+          "Accept if the patient initiates it.",
+          "Keep the relationship secret.",
+          "Seek permission from other patients."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "patient_safety": [
+      {
+        "id": "patient_safety-1",
+        "vignette": "A clinic discovers that two patients have similar names and a medication order was nearly placed in the wrong chart.",
+        "stem": "Which action best reduces recurrence?",
+        "options": [
+          "Use reliable patient identifiers and review the ordering workflow.",
+          "Rely on memory alone.",
+          "Blame the patient with the more common name.",
+          "Hide the near miss.",
+          "Remove all identification checks to speed care."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "patient_safety-2",
+        "vignette": "A ward identifies repeated medication omissions during shift handover.",
+        "stem": "Which response best addresses the system risk?",
+        "options": [
+          "Review the handover process and implement a reliable medication reconciliation check.",
+          "Tell staff to be more careful without examining the process.",
+          "Avoid documenting omissions.",
+          "Assume no harm means no action is needed.",
+          "Eliminate handover communication."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "error_disclosure": [
+      {
+        "id": "error_disclosure-1",
+        "vignette": "A patient receives the wrong medication dose because of an ordering error. They are stable after immediate assessment.",
+        "stem": "Which professional action is required next?",
+        "options": [
+          "Disclose the error promptly and explain known facts and the care plan.",
+          "Wait for the patient to discover the error.",
+          "Change the record to conceal the dose.",
+          "Blame an absent colleague without investigation.",
+          "Disclose only if permanent harm occurs."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "error_disclosure-2",
+        "vignette": "A clinician discovers that a diagnostic result was overlooked and treatment was delayed.",
+        "stem": "Which action best meets the duty of disclosure?",
+        "options": [
+          "Inform the patient promptly about known facts, consequences, and next steps.",
+          "Alter the result date.",
+          "Avoid discussion because the delay has ended.",
+          "Tell only the insurer.",
+          "Ask the patient to waive their right to information."
+        ],
+        "correctOptionIndex": 0
+      }
+    ],
+    "canadian_obligations": [
+      {
+        "id": "canadian_obligations-1",
+        "vignette": "A Canadian physician has reasonable grounds to suspect that a child is being abused. No immediate threat to the physician prevents action.",
+        "stem": "Which professional action is appropriate?",
+        "options": [
+          "Report the concern to the appropriate child-protection authority under applicable law.",
+          "Wait until abuse is proven in court.",
+          "Require parental permission before any report.",
+          "Delegate the entire duty to the suspected abuser.",
+          "Promise the child absolute secrecy."
+        ],
+        "correctOptionIndex": 0
+      },
+      {
+        "id": "canadian_obligations-2",
+        "vignette": "A physician is unsure whether a provincial reporting law applies to a specific patient situation. The patient is currently safe.",
+        "stem": "Which professional action is most appropriate?",
+        "options": [
+          "Clarify the applicable provincial duty using authoritative guidance and act accordingly.",
+          "Assume every province has identical rules.",
+          "Disclose the full chart publicly.",
+          "Ignore the issue indefinitely.",
+          "Ask an unrelated patient to interpret the law."
+        ],
+        "correctOptionIndex": 0
+      }
+    ]
+  }
+}

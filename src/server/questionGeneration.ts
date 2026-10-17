@@ -1,6 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { topicsById } from "../data/topics.js";
+import { curriculumVersion, crosswalkVersion } from "../data/curriculum.js";
+import { blueprint, PROMPT_VERSION, type BlueprintTags } from "../lib/blueprint.js";
+import { sourceObjectivesById } from "./objectives.js";
+import { alignmentIssue, assignmentIsEligible, buildPrompt, SYSTEM_INSTRUCTION } from "./questionPrompts.js";
 import {
   generateQuestionRequestSchema,
   generatedQuestionSchema,
@@ -24,13 +27,9 @@ export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   }
 ];
 
-const SYSTEM_INSTRUCTION = `Write one MCCQE-style Canadian clinical reasoning MCQ for a graduating medical student. Use one unambiguously best answer and five plausible options. Keep the vignette focused and clinically consistent. For every option, give a concise misconception hint that guides without naming or quoting the correct answer, plus a concise explanation. The highYieldPearl should include a relevant, clinically accepted mnemonic, expanding each letter or component when useful (for example, **SIGECAPS** for a major depressive episode). Never refer to answer letters in prose because the server reorders the choices. Use SI units when relevant. Do not invent citations. Return only schema-conforming JSON.`;
-
-export function makePrompt(input: GenerateQuestionRequest): string {
-  const topic = topicsById.get(input.topicId);
-  if (!topic) throw new GenerationError("UNKNOWN_TOPIC", "Unknown curriculum topic", 400);
-  const avoid = input.avoidSignatures.length ? ` Avoid scenarios: ${input.avoidSignatures.join("; ")}.` : "";
-  return `Topic: ${topic.title}. Focus: ${topic.description} Difficulty: ${input.difficulty}/5.${avoid}`;
+export function makePrompt(input: GenerateQuestionRequest, exampleIndex = 0, feedback?: string): string {
+  if (!assignmentIsEligible(input)) throw new GenerationError("INELIGIBLE_BLUEPRINT", "The objective, enabling objective and blueprint task are not an eligible combination", 400);
+  return buildPrompt(input, exampleIndex, feedback);
 }
 
 export class GenerationError extends Error {
@@ -39,7 +38,9 @@ export class GenerationError extends Error {
   }
 }
 
-export function validateQuestionQuality(question: GeneratedQuestion, avoidSignatures: string[]): void {
+export function validateQuestionQuality(question: GeneratedQuestion, avoidSignatures: string[], expected?: BlueprintTags): void {
+  const issue = alignmentIssue(question, expected);
+  if (issue) throw new GenerationError("BLUEPRINT_MISMATCH", issue, 502);
   if (avoidSignatures.some((signature) => signature.toLowerCase() === question.vignetteSignature.toLowerCase())) {
     throw new GenerationError("DUPLICATE_SCENARIO", "Generated scenario duplicates a recent question", 502);
   }
@@ -54,11 +55,13 @@ export function validateQuestionQuality(question: GeneratedQuestion, avoidSignat
 export async function generateQuestion(rawInput: unknown, apiKey = process.env.GEMINI_API_KEY): Promise<ClinicalQuestion> {
   if (!apiKey) throw new GenerationError("MISSING_API_KEY", "GEMINI_API_KEY is not configured", 503);
   const input = generateQuestionRequestSchema.parse(rawInput);
-  const topic = topicsById.get(input.topicId);
-  if (!topic) throw new GenerationError("UNKNOWN_TOPIC", "Unknown curriculum topic", 400);
+  if (!assignmentIsEligible(input)) throw new GenerationError("INELIGIBLE_BLUEPRINT", "The objective, enabling objective and blueprint task are not an eligible combination", 400);
+  const objective = sourceObjectivesById.get(input.blueprint.mccObjectiveIds[0])!;
 
   const ai = new GoogleGenAI({ apiKey });
   let lastError: unknown;
+  let feedback: string | undefined;
+  const exampleIndex = Math.floor(Math.random() * 2);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const attemptNumber = attempt + 1;
     const attemptStartedAt = Date.now();
@@ -66,7 +69,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     try {
       const response = await ai.models.generateContent({
         model: input.model,
-        contents: makePrompt(input),
+        contents: makePrompt(input, exampleIndex, feedback),
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
           responseMimeType: "application/json",
@@ -76,22 +79,30 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       });
       if (!response.text) throw new GenerationError("EMPTY_RESPONSE", "Gemini returned no question", 502);
       const parsed = generatedQuestionSchema.parse(JSON.parse(response.text));
-      validateQuestionQuality(parsed, input.avoidSignatures);
+      validateQuestionQuality(parsed, input.avoidSignatures, input.blueprint);
       const randomized = shuffleQuestionOptions(parsed);
       console.info(`[question-generation] Gemini attempt=${attemptNumber} completed durationMs=${Date.now() - attemptStartedAt}`);
       return {
         ...randomized,
         id: crypto.randomUUID(),
-        topicId: topic.id,
-        topicTitle: topic.title,
-        category: topic.category,
+        topicId: input.topicId,
+        topicTitle: objective.title,
+        category: input.blueprint.discipline,
         model: input.model,
         generatedAt: new Date().toISOString(),
-        schemaVersion: 1,
+        schemaVersion: 2,
+        blueprintVersion: blueprint.version,
+        curriculumVersion,
+        crosswalkVersion,
+        promptVersion: PROMPT_VERSION,
+        enablingObjectiveId: input.enablingObjectiveId,
         optionOrderVersion: 1
       };
     } catch (error) {
       lastError = error;
+      feedback = error instanceof z.ZodError ? `Correct the response schema: ${error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ").slice(0, 1500)}`
+        : error instanceof SyntaxError ? "Return valid JSON matching the response schema."
+        : error instanceof GenerationError ? error.message : undefined;
       const code = error instanceof GenerationError ? error.code : error instanceof Error ? error.name : "UNKNOWN_ERROR";
       console.warn(`[question-generation] Gemini attempt=${attemptNumber} failed code=${code} durationMs=${Date.now() - attemptStartedAt}`);
       if (error instanceof GenerationError && error.status < 500) throw error;

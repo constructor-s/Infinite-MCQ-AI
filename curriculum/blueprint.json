@@ -1,0 +1,164 @@
+{
+  "version": "mccqe-2026-v1",
+  "sources": [
+    "https://mcc.ca/examinations-assessments/mccqe/",
+    "https://mcc.ca/wp-content/uploads/Study-smarter-A-study-guide-for-the-MCCQE.pdf"
+  ],
+  "coverageWindow": 200,
+  "tolerancePercentagePoints": 5,
+  "physicianActivities": {
+    "assessment_diagnosis": 0.45,
+    "management": 0.35,
+    "communication": 0.1,
+    "professional_behaviours": 0.1
+  },
+  "careDimensions": {
+    "acute": 0.35,
+    "chronic": 0.3,
+    "prevention": 0.2,
+    "psychosocial": 0.15
+  },
+  "disciplines": {
+    "medicine": 0.16666666666666666,
+    "surgery": 0.16666666666666666,
+    "pediatrics": 0.16666666666666666,
+    "obgyn": 0.16666666666666666,
+    "psychiatry": 0.16666666666666666,
+    "phelo": 0.16666666666666666
+  },
+  "disciplineGuidance": "Approximately equal coverage; study-guide guidance, not official fixed quotas.",
+  "jointDistribution": "No official joint probabilities. Independence products are fallback tie-break weights only, after eligibility filtering.",
+  "adaptiveMix": 0.3,
+  "cognitiveTasks": {
+    "most_likely_diagnosis": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Identify the single most likely diagnosis or cause. Options must be diagnoses or causes, never treatments."
+    },
+    "differential_diagnosis": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Distinguish a competing diagnosis using the discriminating findings. Options must be diagnoses."
+    },
+    "history_priorities": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Choose the history question or historical finding that most clarifies the diagnostic uncertainty. Do not reveal the requested historical detail or its chronology in the vignette."
+    },
+    "physical_exam_interpretation": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Interpret an examination finding to identify its diagnostic significance, rather than choosing treatment."
+    },
+    "diagnostic_investigation": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Choose an investigation that establishes or excludes the diagnosis. Next-step wording is acceptable; options must be investigations."
+    },
+    "laboratory_interpretation": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Interpret actual laboratory values supplied in the paragraph. Options must be diagnoses or interpretations, not treatments."
+    },
+    "imaging_interpretation": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Interpret the supplied imaging findings described in words; do not refer to an unavailable image. Do not reveal the diagnosis in the findings."
+    },
+    "ecg_interpretation": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Interpret a supplied textual ECG description (rate, rhythm, intervals or lead findings). Do not refer to an unavailable tracing or name the answer in the description."
+    },
+    "diagnostic_criteria": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Apply diagnostic criteria to the supplied case; test whether criteria are met, not treatment selection."
+    },
+    "risk_stratification": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Use supplied risk factors or a validated score to classify risk. State any required score components and time horizon."
+    },
+    "evidence_statistical_interpretation": {
+      "physicianActivity": "assessment_diagnosis",
+      "instruction": "Interpret study design, bias, diagnostic performance or numerical evidence. Supply all data needed and avoid rote definitions alone. When relevant, use sensitivity=TP/(TP+FN), specificity=TN/(TN+FP), PPV=TP/(TP+FP), and NPV=TN/(TN+FN). With sensitivity and specificity fixed, increasing prevalence increases PPV and decreases NPV."
+    },
+    "initial_stabilization": {
+      "physicianActivity": "management",
+      "instruction": "Choose the immediate life-preserving stabilization action in a clearly unstable patient."
+    },
+    "treatment_choice": {
+      "physicianActivity": "management",
+      "instruction": "Choose the best treatment for the established diagnosis, considering severity and patient context. Isolate a specific treatment goal in the stem when several simultaneous interventions are indicated. Do not place two concurrently indicated treatments in competition."
+    },
+    "pharmacology_contraindications": {
+      "physicianActivity": "management",
+      "instruction": "Choose a medication, mechanism-related adverse effect or contraindication relevant to treatment safety."
+    },
+    "procedural_intervention": {
+      "physicianActivity": "management",
+      "instruction": "Choose an indicated therapeutic procedure or determine when intervention is indicated. The procedure must actually be indicated for the scenario, not simply the least bad procedural option. If initial medical treatment is needed first, state that it has already been provided or choose a different scenario. A diagnostic procedure alone is assessment, not therapeutic management. If comparing operative approaches or observation with surgery, include the distinguishing indications and a consistent duration of any conservative trial."
+    },
+    "long_term_management": {
+      "physicianActivity": "management",
+      "instruction": "Choose an ongoing treatment strategy for an established condition."
+    },
+    "follow_up_monitoring": {
+      "physicianActivity": "management",
+      "instruction": "Choose what or when to monitor after a specified diagnosis or treatment."
+    },
+    "disposition_escalation": {
+      "physicianActivity": "management",
+      "instruction": "Choose a safe care setting, referral or escalation of care based on explicit clinical stability and resources."
+    },
+    "patient_counselling": {
+      "physicianActivity": "communication",
+      "instruction": "Choose what to say to explain a health issue in accurate, respectful, patient-centred language."
+    },
+    "informed_consent_discussion": {
+      "physicianActivity": "communication",
+      "instruction": "Choose the explanation or discussion needed for informed consent. Test communication, not legal authorization."
+    },
+    "shared_decision_making": {
+      "physicianActivity": "communication",
+      "instruction": "Elicit the patient’s values and preferences and support a shared choice when reasonable options exist."
+    },
+    "difficult_news": {
+      "physicianActivity": "communication",
+      "instruction": "Choose an empathic response when delivering serious or difficult news; options should be things the physician says. Check that no second option is also an appropriate empathic response in the same context; distinguish the options by a meaningful communication choice."
+    },
+    "health_literacy": {
+      "physicianActivity": "communication",
+      "instruction": "Choose a plain-language explanation, interpreter strategy or teach-back response that checks understanding."
+    },
+    "treatment_barriers": {
+      "physicianActivity": "communication",
+      "instruction": "Explore a concrete access, financial, cultural or practical barrier without assumptions or blame."
+    },
+    "ethics": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Resolve an ethical conflict through professional duties, autonomy, beneficence and fairness."
+    },
+    "confidentiality": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Determine whether and how information may be shared under the stated circumstances."
+    },
+    "capacity_consent": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Determine decision-making capacity or who can authorize a decision; distinguish this from how to explain consent. Prefer core decision-specific capacity and consent principles. Do not test a detailed province-specific statutory hierarchy unless the applicable legal rule is explicitly provided in the source context."
+    },
+    "professional_boundaries": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Choose a professional response to a boundary conflict or dual relationship."
+    },
+    "patient_safety": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Choose a systems-oriented action that prevents harm or responds to a safety hazard."
+    },
+    "error_disclosure": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Choose the professional duty or action after a medical error; distinguish disclosure obligations from wording an empathic response."
+    },
+    "canadian_obligations": {
+      "physicianActivity": "professional_behaviours",
+      "instruction": "Apply a Canadian legal, reporting or regulatory duty. Specify jurisdiction when the answer depends on provincial or territorial law; never assume all Canadian laws are identical. Ground the duty in the supplied source. Avoid testing exact statutory deadlines, exceptions, or hierarchy details absent from that source."
+    }
+  },
+  "careInstructions": {
+    "acute": "Make the tested decision depend on a brief illness or a clearly described recent deterioration over hours or days. A chronic underlying disease may be background, but months of unchanged symptoms and a first visit alone do not establish acute care.",
+    "chronic": "Make the course or consequences of a condition of long duration central to the case.",
+    "prevention": "Make screening, prevention, health promotion or population health central to the case.",
+    "psychosocial": "Make social or psychological determinants and their effect on health central to the case. Psychiatry alone does not make a question psychosocial."
+  }
+}

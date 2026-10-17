@@ -1,0 +1,289 @@
+{
+  "source": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
+  "localSourceSha256": "d02a78a26b5901a30d84b105652ad80a8445817ab273c64af78459e4991c1999",
+  "provenance": "Application-authored structural observations; no official item text or answer keys reproduced.",
+  "observations": [
+    "Focused prose vignettes followed by a direct decision stem.",
+    "Some official items use tabulated findings; this application integrates findings into prose.",
+    "Official examples have three to five options; the application retains its existing five-option controls.",
+    "Next-step stems include diagnostic, communication and professional decisions as well as treatment.",
+    "The 55-item reference set is not a sampling distribution."
+  ],
+  "items": [
+    {
+      "questionNumber": 1,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 2,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 3,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 4,
+      "optionCount": 5,
+      "stemForm": "diagnosis_or_cause"
+    },
+    {
+      "questionNumber": 5,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 6,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 7,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 8,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 9,
+      "optionCount": 5,
+      "stemForm": "diagnosis_or_cause"
+    },
+    {
+      "questionNumber": 10,
+      "optionCount": 5,
+      "stemForm": "diagnosis_or_cause"
+    },
+    {
+      "questionNumber": 11,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 12,
+      "optionCount": 5,
+      "stemForm": "diagnosis_or_cause"
+    },
+    {
+      "questionNumber": 13,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 14,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 15,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 16,
+      "optionCount": 5,
+      "stemForm": "diagnosis_or_cause"
+    },
+    {
+      "questionNumber": 17,
+      "optionCount": 3,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 18,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 19,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 20,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 21,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 22,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 23,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 24,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 25,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 26,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 27,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 28,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 29,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 30,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 31,
+      "optionCount": 4,
+      "stemForm": "diagnosis_or_cause"
+    },
+    {
+      "questionNumber": 32,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 33,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 34,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 35,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 36,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 37,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 38,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 39,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 40,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 41,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 42,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 43,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 44,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 45,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 46,
+      "optionCount": 5,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 47,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 48,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 49,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 50,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 51,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    },
+    {
+      "questionNumber": 52,
+      "optionCount": 4,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 53,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 54,
+      "optionCount": 5,
+      "stemForm": "next_step"
+    },
+    {
+      "questionNumber": 55,
+      "optionCount": 4,
+      "stemForm": "direct_task"
+    }
+  ]
+}

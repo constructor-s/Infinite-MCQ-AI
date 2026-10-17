@@ -1,22 +1,18 @@
 import type { ClinicalQuestion } from "../lib/contracts";
+import { blueprint, PROMPT_VERSION } from "../lib/blueprint";
+import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
 
 export function makeQuestion(overrides: Partial<ClinicalQuestion> = {}): ClinicalQuestion {
   return {
     id: crypto.randomUUID(),
-    topicId: "cardio.acs",
-    topicTitle: "Acute coronary syndrome",
-    category: "Internal Medicine",
-    model: "gemini-3.5-flash-lite",
-    generatedAt: new Date().toISOString(),
-    schemaVersion: 1,
+    topicId: "mcc.14", topicTitle: "Chest pain", category: "medicine",
+    model: "gemini-3.5-flash-lite", generatedAt: new Date().toISOString(),
+    schemaVersion: 2, optionOrderVersion: 1,
+    blueprintVersion: blueprint.version, curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION,
+    enablingObjectiveId: "enabling-1",
+    blueprint: { discipline: "medicine", physicianActivity: "management", careDimension: "acute", cognitiveTask: "initial_stabilization", mccObjectiveIds: ["14"] },
     difficulty: 3,
-    vignette: {
-      narrative: "A 62-year-old patient presents with central chest pressure that began while walking and has persisted for forty minutes.",
-      vitalSigns: [{ name: "Blood pressure", value: "138/84 mm Hg" }],
-      physicalExam: ["The patient appears diaphoretic."],
-      laboratoryResults: [],
-      investigations: [{ type: "ECG", findings: "ST-segment elevation in leads II, III, and aVF." }]
-    },
+    vignette: "A 62-year-old patient has ongoing central chest pressure for forty minutes and is diaphoretic. ECG shows ST elevation in leads II, III, and aVF.",
     stem: "Which of the following is the most appropriate next step?",
     options: [
       { id: "A", text: "Immediate reperfusion assessment", hint: "Consider whether this is a time-sensitive vascular occlusion.", explanation: "This presentation requires immediate assessment for reperfusion." },

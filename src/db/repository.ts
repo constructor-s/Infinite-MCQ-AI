@@ -1,7 +1,8 @@
 import { db, type GenerationEvent, type IWorldDatabase } from "./database";
 import type { ClinicalQuestion, Encounter, EncounterMode, OptionId } from "../lib/contracts";
-import { shuffleQuestionOptions } from "../lib/shuffleQuestion";
 import { createLocalId } from "../lib/createLocalId";
+import { blueprint } from "../lib/blueprint";
+import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
 
 export class LocalStudyRepository {
   constructor(private database: IWorldDatabase = db) {}
@@ -9,15 +10,11 @@ export class LocalStudyRepository {
   async getFreshQuestions(): Promise<ClinicalQuestion[]> {
     const items = await this.database.queueItems.orderBy("createdAt").toArray();
     const questions = await this.database.questions.bulkGet(items.map((item) => item.questionId));
-    return Promise.all(
-      questions
-        .filter((question): question is ClinicalQuestion => Boolean(question))
-        .map((question) => this.ensureRandomized(question))
-    );
+    return questions.filter((question): question is ClinicalQuestion => Boolean(question) && question?.schemaVersion === 2);
   }
 
   async getFreshCount(): Promise<number> {
-    return this.database.queueItems.count();
+    return (await this.getFreshQuestions()).length;
   }
 
   async enqueue(question: ClinicalQuestion): Promise<void> {
@@ -43,11 +40,50 @@ export class LocalStudyRepository {
     return (await this.database.queueItems.toArray()).map((item) => item.topicId);
   }
 
+  async getSamplingContext(): Promise<SamplingContext> {
+    return this.database.transaction("r", this.database.questions, this.database.encounters, async () => {
+      const tagged = await this.database.questions.orderBy("generatedAt").reverse()
+        .filter((q) => q.schemaVersion === 2).limit(blueprint.coverageWindow).toArray();
+      const questions: CoverageRecord[] = tagged.reverse().map((q) => ({ id: q.id, generatedAt: q.generatedAt, blueprint: q.blueprint }));
+      const objectiveStats: Record<string, ObjectiveStats> = {};
+      const statsFor = (id: string) => objectiveStats[id] ??= { attempts: 0, errors: 0, recentCount: 0 };
+      for (const question of questions) {
+        for (const id of question.blueprint.mccObjectiveIds) statsFor(id).recentCount += 1;
+      }
+      const encounters = await this.database.encounters.orderBy("startedAt").toArray();
+      // Use at most the latest 20 first-attempt outcomes per objective. Repeated
+      // guesses in one encounter never become extra evidence of weakness.
+      const outcomes = new Map<string, boolean[]>();
+      for (const encounter of encounters) {
+        const tags = encounter.blueprint;
+        if (!tags) continue;
+        for (const id of tags.mccObjectiveIds) {
+          statsFor(id).lastExposedAt = encounter.startedAt;
+          if (encounter.firstAttemptCorrect !== undefined || encounter.revealedAnswer) {
+            const values = outcomes.get(id) ?? [];
+            values.push(encounter.firstAttemptCorrect === true && !encounter.revealedAnswer);
+            outcomes.set(id, values.slice(-20));
+          }
+        }
+      }
+      for (const [id, values] of outcomes) {
+        Object.assign(statsFor(id), { attempts: values.length, errors: values.filter((correct) => !correct).length });
+      }
+      return { questions, objectiveStats };
+    });
+  }
+
   async getRecentCompletedQuestions(limit = 5): Promise<ClinicalQuestion[]> {
     const encounters = (await this.database.encounters.where("completedAt").above("").reverse().sortBy("completedAt")).slice(0, limit);
     const uniqueIds = [...new Set(encounters.map((encounter) => encounter.questionId))];
     const questions = await this.database.questions.bulkGet(uniqueIds);
-    return questions.filter((question): question is ClinicalQuestion => Boolean(question));
+    return questions.filter((question): question is ClinicalQuestion => Boolean(question) && question?.schemaVersion === 2);
+  }
+
+  async getRecentGeneratedQuestions(limit = 5): Promise<ClinicalQuestion[]> {
+    // Include unseen queued scenarios so a refill also avoids its own new items.
+    return this.database.questions.orderBy("generatedAt").reverse()
+      .filter((question) => question.schemaVersion === 2).limit(limit).toArray();
   }
 
   async beginEncounter(question: ClinicalQuestion, mode: EncounterMode): Promise<Encounter> {
@@ -62,6 +98,7 @@ export class LocalStudyRepository {
       id: createLocalId(),
       questionId: question.id,
       topicId: question.topicId,
+      blueprint: structuredClone(question.blueprint),
       mode,
       startedAt: now,
       updatedAt: now,
@@ -117,7 +154,10 @@ export class LocalStudyRepository {
         if (encounter.completedAt > previous) lastReview.set(encounter.questionId, encounter.completedAt);
       }
     }
+    const stored = await this.database.questions.bulkGet([...freshByQuestion.keys()]);
+    const available = new Map(stored.filter((q): q is ClinicalQuestion => Boolean(q) && q?.schemaVersion === 2).map((q) => [q.id, q]));
     const ranked = [...freshByQuestion.values()]
+      .filter((encounter) => available.has(encounter.questionId))
       .filter((encounter) => encounter.questionId !== excludeQuestionId)
       .sort((a, b) => {
         const aMissed = a.firstAttemptCorrect === false || a.revealedAnswer ? 0 : 1;
@@ -126,26 +166,8 @@ export class LocalStudyRepository {
         const reviewOrder = (lastReview.get(a.questionId) ?? "").localeCompare(lastReview.get(b.questionId) ?? "");
         return reviewOrder || Math.random() - 0.5;
       });
-    const selected = ranked[0] ?? [...freshByQuestion.values()][0];
-    const question = selected ? await this.database.questions.get(selected.questionId) : undefined;
-    return question ? this.ensureRandomized(question) : undefined;
-  }
-
-  private async ensureRandomized(question: ClinicalQuestion): Promise<ClinicalQuestion> {
-    return this.database.transaction("rw", this.database.questions, this.database.encounters, async () => {
-      const current = await this.database.questions.get(question.id) ?? question;
-      if (current.optionOrderVersion === 1) return current;
-
-      // A started encounter means the old letters have already been shown and possibly recorded.
-      // Preserve that order; only unseen cached questions are safe to shuffle during migration.
-      const wasAlreadyPresented = await this.database.encounters.where("questionId").equals(current.id).count() > 0;
-      const migrated = {
-        ...(wasAlreadyPresented ? current : shuffleQuestionOptions(current)),
-        optionOrderVersion: 1 as const
-      };
-      await this.database.questions.put(migrated);
-      return migrated;
-    });
+    const selected = ranked[0] ?? [...freshByQuestion.values()].find((encounter) => available.has(encounter.questionId));
+    return selected ? available.get(selected.questionId) : undefined;
   }
 
   async getSetting<T>(key: string, fallback: T): Promise<T> {

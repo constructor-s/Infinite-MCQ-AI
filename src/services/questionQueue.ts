@@ -1,6 +1,7 @@
-import { topics } from "../data/topics";
 import { clinicalQuestionSchema, type ClinicalQuestion, type ModelOption } from "../lib/contracts";
-import { selectWeightedTopic } from "../lib/topicSampler";
+import { selectBlueprint } from "../lib/blueprintSampler";
+import { blueprint, PROMPT_VERSION, sameBlueprint } from "../lib/blueprint";
+import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
 import { studyRepository, type LocalStudyRepository } from "../db/repository";
 
 export const QUEUE_TARGET = 10;
@@ -61,15 +62,16 @@ export class QuestionQueueService {
     onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET });
     while (ready < QUEUE_TARGET) {
       const model = await this.repository.getSetting("selectedModel", "gemini-3.5-flash-lite");
-      const queuedIds = await this.repository.getQueuedTopicIds();
-      const recentQuestions = await this.repository.getRecentCompletedQuestions(5);
-      const topic = selectWeightedTopic(topics, [...queuedIds, ...recentQuestions.map((question) => question.topicId)]);
+      const recentQuestions = await this.repository.getRecentGeneratedQuestions(5);
+      const context = await this.repository.getSamplingContext();
+      const selection = selectBlueprint(context);
+      const metadata = { blueprint: selection.blueprint, blueprintVersion: blueprint.version, curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION, enablingObjectiveId: selection.enablingObjectiveId };
       try {
         const response = await fetchWithTimeout("/api/questions/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({
-            topicId: topic.id,
+            ...selection,
             model,
             difficulty: 3,
             avoidSignatures: recentQuestions.map((question) => question.vignetteSignature).slice(0, 5)
@@ -78,12 +80,15 @@ export class QuestionQueueService {
         const body = await response.json();
         if (!response.ok) throw new ApiError(body.error?.code ?? "GENERATION_FAILED", body.error?.message ?? "Generation failed", response.status);
         const question: ClinicalQuestion = clinicalQuestionSchema.parse(body);
+        if (question.topicId !== selection.topicId || !sameBlueprint(question.blueprint, selection.blueprint)) {
+          throw new ApiError("BLUEPRINT_MISMATCH", "Generated question does not match its selected blueprint", 502);
+        }
         await this.repository.enqueue(question);
-        await this.repository.logGeneration({ topicId: topic.id, model, outcome: "success" });
+        await this.repository.logGeneration({ topicId: selection.topicId, model, outcome: "success", ...metadata });
       } catch (error) {
         const code = error instanceof ApiError ? error.code : error instanceof DOMException && error.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR";
         try {
-          await this.repository.logGeneration({ topicId: topic.id, model, outcome: "error", code });
+          await this.repository.logGeneration({ topicId: selection.topicId, model, outcome: "error", code, ...metadata });
         } catch {
           // Preserve the generation error if diagnostic persistence is unavailable.
         }

@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
-import rawTopics from "../../curriculum/topics.json";
-import { clinicalQuestionSchema, topicDefinitionSchema } from "./contracts";
+import { clinicalQuestionSchema, generateQuestionRequestSchema } from "./contracts";
 import { makeQuestion } from "../test/fixtures";
-import { z } from "zod";
 
 describe("curriculum and question contracts", () => {
-  it("contains exactly 60 valid curated topics", () => {
-    expect(z.array(topicDefinitionSchema).length(60).parse(rawTopics)).toHaveLength(60);
+  it("requires blueprint assignments on generation requests", () => {
+    expect(() => generateQuestionRequestSchema.parse({ topicId: "mcc.14", model: "gemini-3.5-flash-lite" })).toThrow();
+  });
+
+  it("accepts only the current paragraph format with provenance", () => {
+    expect(() => clinicalQuestionSchema.parse({ ...makeQuestion(), schemaVersion: 1 })).toThrow();
+    expect(() => clinicalQuestionSchema.parse({ ...makeQuestion(), vignette: { narrative: "An old structured case." } })).toThrow();
+    expect(() => clinicalQuestionSchema.parse({ ...makeQuestion(), curriculumVersion: undefined })).toThrow();
   });
 
   it("accepts a complete five-option question", () => {
