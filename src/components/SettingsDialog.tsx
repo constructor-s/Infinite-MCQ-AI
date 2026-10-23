@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ModelOption, Theme } from "../lib/contracts";
 import { fetchModels } from "../services/questionQueue";
+import { studyRepository, type CorrectRates } from "../db/repository";
 
 type Props = {
   open: boolean;
@@ -19,6 +20,19 @@ const FALLBACK_MODELS: ModelOption[] = [
 export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectModel, onSelectTheme }: Props) {
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
   const [error, setError] = useState("");
+  const [correctRates, setCorrectRates] = useState<CorrectRates | null>(null);
+  const [ratesError, setRatesError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setCorrectRates(null);
+    setRatesError("");
+    void studyRepository.getCorrectRates()
+      .then((rates) => { if (active) setCorrectRates(rates); })
+      .catch(() => { if (active) setRatesError("Could not load correct rates."); });
+    return () => { active = false; };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -70,6 +84,22 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
             ))}
           </div>
         </fieldset>
+        <section className="correct-rate-settings" aria-labelledby="correct-rate-title">
+          <h3 id="correct-rate-title">Correct rate</h3>
+          <div aria-live="polite">
+            {ratesError ? <p className="inline-error">{ratesError}</p> : !correctRates ? <p className="settings-note">Loading correct rates…</p> : (
+              <dl className="correct-rates">
+                {([["Recent 20", correctRates.recent20], ["Recent 100", correctRates.recent100]] as const).map(([label, rate]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{rate.total ? `${Math.round(rate.correct / rate.total * 100)}% · ${rate.correct}/${rate.total}` : "No answers yet"}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+          <p className="settings-note">First try on fresh questions only. Reveals count as incorrect; reviews are excluded. Uses history on this device.</p>
+        </section>
         {error && <p className="inline-error" role="alert">{error}</p>}
       </section>
     </div>

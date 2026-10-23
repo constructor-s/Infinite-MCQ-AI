@@ -171,6 +171,12 @@ legend { margin-bottom: 9px; font-weight: 700; }
 .model-option small, .settings-note { color: var(--muted); line-height: 1.4; }
 .settings-note { margin: 18px 0 0; font-size: 12px; }
 .appearance-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--soft-border); }
+.correct-rate-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--soft-border); }
+.correct-rate-settings h3 { margin: 0 0 9px; font-size: 16px; }
+.correct-rates { display: grid; gap: 12px; margin: 0; }
+.correct-rates > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }
+.correct-rates dt { color: var(--muted); }
+.correct-rates dd { margin: 0; font-weight: 700; }
 .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .theme-option { display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 10px 12px; border: 1px solid var(--border); cursor: pointer; }
 .theme-option:has(input:checked) { border: 2px solid var(--strong-border); padding: 9px 11px; background: var(--hover); font-weight: 700; }

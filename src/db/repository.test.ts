@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { IWorldDatabase } from "./database";
 import { LocalStudyRepository } from "./repository";
 import { makeQuestion } from "../test/fixtures";
+import type { Encounter } from "../lib/contracts";
 
 describe("LocalStudyRepository", () => {
   let database: IWorldDatabase;
@@ -13,6 +14,50 @@ describe("LocalStudyRepository", () => {
   });
 
   afterEach(async () => database.delete());
+
+  it("returns empty correct rates without answer history", async () => {
+    expect(await repository.getCorrectRates()).toEqual({
+      recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 }
+    });
+  });
+
+  it("uses the newest 20 and 100 eligible encounters by start time", async () => {
+    const base = await repository.beginEncounter(makeQuestion(), "fresh");
+    const rows: Encounter[] = Array.from({ length: 110 }, (_, i) => ({
+      ...base,
+      id: `encounter-${i}`,
+      startedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString(),
+      firstAttemptCorrect: i < 100
+    }));
+    // Insertion order must not determine which outcomes enter the windows.
+    await database.encounters.clear();
+    await database.encounters.bulkPut(rows.reverse());
+    await database.encounters.bulkPut([
+      { ...base, id: "unanswered", startedAt: "2027-01-01T00:00:00Z" },
+      { ...base, id: "review", mode: "review", firstAttemptCorrect: true, startedAt: "2027-01-01T00:00:01Z" }
+    ]);
+    expect(await repository.getCorrectRates()).toEqual({
+      recent20: { correct: 10, total: 20 }, recent100: { correct: 90, total: 100 }
+    });
+  });
+
+  it("scores first tries and reveals once, including unfinished wrong answers", async () => {
+    const correct = await repository.beginEncounter(makeQuestion(), "fresh");
+    await repository.recordSelection(correct.id, "A", true);
+    const retry = await repository.beginEncounter(makeQuestion(), "fresh");
+    await repository.recordSelection(retry.id, "B", false);
+    await repository.recordSelection(retry.id, "A", true);
+    const revealed = await repository.beginEncounter(makeQuestion(), "fresh");
+    await repository.revealAnswer(revealed.id);
+    const wrong = await repository.beginEncounter(makeQuestion(), "fresh");
+    await repository.recordSelection(wrong.id, "B", false);
+    const review = await repository.beginEncounter(makeQuestion(), "review");
+    await repository.recordSelection(review.id, "A", true);
+    await repository.beginEncounter(makeQuestion(), "fresh");
+    expect(await repository.getCorrectRates()).toEqual({
+      recent20: { correct: 1, total: 4 }, recent100: { correct: 1, total: 4 }
+    });
+  });
 
   it("persists queue order and removes completed queue items", async () => {
     const first = makeQuestion();

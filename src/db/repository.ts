@@ -4,8 +4,26 @@ import { createLocalId } from "../lib/createLocalId";
 import { blueprint } from "../lib/blueprint";
 import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
 
+export type CorrectRate = { correct: number; total: number };
+export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate };
+
 export class LocalStudyRepository {
   constructor(private database: IWorldDatabase = db) {}
+
+  async getCorrectRates(): Promise<CorrectRates> {
+    const encounters = await this.database.encounters.orderBy("startedAt").reverse()
+      .filter((encounter) => encounter.mode === "fresh" &&
+        (encounter.firstAttemptCorrect !== undefined || encounter.revealedAnswer))
+      .limit(100).toArray();
+    const summarize = (limit: number): CorrectRate => {
+      const window = encounters.slice(0, limit);
+      return {
+        correct: window.filter((encounter) => encounter.firstAttemptCorrect === true && !encounter.revealedAnswer).length,
+        total: window.length
+      };
+    };
+    return { recent20: summarize(20), recent100: summarize(100) };
+  }
 
   async getFreshQuestions(): Promise<ClinicalQuestion[]> {
     const items = await this.database.queueItems.orderBy("createdAt").toArray();
