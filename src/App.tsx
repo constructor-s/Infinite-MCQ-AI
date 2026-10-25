@@ -3,7 +3,7 @@ import { QuestionView } from "./components/QuestionView";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { StatusBar } from "./components/StatusBar";
 import { studyRepository } from "./db/repository";
-import type { ClinicalQuestion, Encounter, EncounterMode, ModelOption, OptionId, Theme } from "./lib/contracts";
+import type { ClinicalQuestion, Encounter, EncounterMode, FollowUpMessage, ModelOption, OptionId, Theme } from "./lib/contracts";
 import { activateTheme, getStoredTheme, normalizeTheme } from "./lib/theme";
 import { ApiError, QUEUE_TARGET, questionQueue, type QueueProgress } from "./services/questionQueue";
 
@@ -148,6 +148,11 @@ export default function App() {
     }
   }, [busy, encounter?.completedAt, loadNextAvailable, mode, question, startFill]);
 
+  const handleFollowUpMessagesChange = useCallback(async (messages: FollowUpMessage[]) => {
+    if (!encounter) return;
+    setEncounter(await studyRepository.setFollowUpMessages(encounter.id, messages));
+  }, [encounter]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (settingsOpen || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -195,7 +200,16 @@ export default function App() {
       />
 
       {question && encounter ? (
-        <QuestionView question={question} encounter={encounter} mode={mode} busy={busy} onSelect={handleSelect} onReveal={handleReveal} onNext={handleNext} />
+        <QuestionView
+          question={question}
+          encounter={encounter}
+          mode={mode}
+          busy={busy}
+          onSelect={handleSelect}
+          onReveal={handleReveal}
+          onNext={handleNext}
+          onFollowUpMessagesChange={handleFollowUpMessagesChange}
+        />
       ) : (
         <main className="empty-state">
           {!initialized || progress.generating ? (

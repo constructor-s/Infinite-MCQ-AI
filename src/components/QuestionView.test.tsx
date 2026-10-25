@@ -13,10 +13,14 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
   };
 }
 
+const viewHandlers = () => ({
+  onSelect: vi.fn(), onReveal: vi.fn(), onNext: vi.fn(), onFollowUpMessagesChange: vi.fn()
+});
+
 describe("QuestionView", () => {
   it("does not reveal the topic and uses a paragraph vignette", () => {
     const question = makeQuestion();
-    render(<QuestionView question={question} encounter={makeEncounter()} mode="fresh" busy={false} onSelect={vi.fn()} onReveal={vi.fn()} onNext={vi.fn()} />);
+    render(<QuestionView question={question} encounter={makeEncounter()} mode="fresh" busy={false} {...viewHandlers()} />);
     expect(screen.queryByText(question.topicTitle)).not.toBeInTheDocument();
     expect(screen.getByText(question.vignette)).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -25,7 +29,7 @@ describe("QuestionView", () => {
 
   it("shows the selected distractor hint without revealing the answer", () => {
     const question = makeQuestion();
-    render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["B"] })} mode="fresh" busy={false} onSelect={vi.fn()} onReveal={vi.fn()} onNext={vi.fn()} />);
+    render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["B"] })} mode="fresh" busy={false} {...viewHandlers()} />);
     expect(screen.getByText(question.options[1].hint)).toBeInTheDocument();
     expect(screen.queryByText(/Answer: A/)).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Ask about this question" })).not.toBeInTheDocument();
@@ -34,10 +38,24 @@ describe("QuestionView", () => {
   it("reveals explanations and enables Next after resolution", () => {
     const question = makeQuestion();
     const onNext = vi.fn();
-    render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["A"], eventuallyCorrect: true, completedAt: new Date().toISOString() })} mode="fresh" busy={false} onSelect={vi.fn()} onReveal={vi.fn()} onNext={onNext} />);
+    render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["A"], eventuallyCorrect: true, completedAt: new Date().toISOString() })} mode="fresh" busy={false} {...viewHandlers()} onNext={onNext} />);
     expect(screen.getByText("Answer: A")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Ask about this question" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next question" }));
     expect(onNext).toHaveBeenCalledOnce();
+  });
+
+  it("restores persisted follow-up messages", () => {
+    const question = makeQuestion();
+    const encounter = makeEncounter({
+      completedAt: new Date().toISOString(),
+      followUpMessages: [
+        { role: "user", text: "Why reperfusion?" },
+        { role: "assistant", text: "Because this is an acute STEMI." }
+      ]
+    });
+    render(<QuestionView question={question} encounter={encounter} mode="fresh" busy={false} {...viewHandlers()} />);
+    expect(screen.getByText("Why reperfusion?")).toBeInTheDocument();
+    expect(screen.getByText("Because this is an acute STEMI.")).toBeInTheDocument();
   });
 });

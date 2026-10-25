@@ -22,7 +22,7 @@ describe("SettingsDialog", () => {
 
   beforeEach(() => {
     vi.mocked(studyRepository.getCorrectRates).mockReset().mockResolvedValue({
-      recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 }
+      lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 }, recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 }
     });
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ models: [] }), { status: 200 })));
   });
@@ -47,17 +47,19 @@ describe("SettingsDialog", () => {
     expect(onSelectTheme).toHaveBeenCalledWith("auto");
     fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
     expect(onSelectTheme).toHaveBeenCalledWith("dark");
-    await screen.findAllByText("No answers yet");
+    await screen.findAllByText("0/0");
   });
 
   it("shows rounded percentages and actual sample sizes independently of model availability", async () => {
     vi.mocked(studyRepository.getCorrectRates).mockResolvedValue({
-      recent20: { correct: 2, total: 3 }, recent100: { correct: 15, total: 23 }
+      lastHour: { correct: 0, total: 2 }, last24Hours: { correct: 3, total: 4 }, recent20: { correct: 2, total: 3 }, recent100: { correct: 15, total: 23 }
     });
     vi.mocked(fetch).mockRejectedValue(new Error("Models offline"));
     render(<SettingsDialog {...props} />);
     expect(await screen.findByText("67% · 2/3")).toBeInTheDocument();
     expect(screen.getByText("65% · 15/23")).toBeInTheDocument();
+    expect(screen.getByText("0% · 0/2")).toBeInTheDocument();
+    expect(screen.getByText("75% · 3/4")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Models offline");
   });
 
@@ -66,8 +68,8 @@ describe("SettingsDialog", () => {
     vi.mocked(studyRepository.getCorrectRates).mockReturnValue(new Promise((done) => { resolve = done; }));
     render(<SettingsDialog {...props} />);
     expect(screen.getByText("Loading correct rates…")).toBeInTheDocument();
-    await act(async () => resolve({ recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 } }));
-    expect(screen.getAllByText("No answers yet")).toHaveLength(2);
+    await act(async () => resolve({ lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 }, recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 } }));
+    expect(screen.getAllByText("0/0")).toHaveLength(4);
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
@@ -77,7 +79,7 @@ describe("SettingsDialog", () => {
     expect(await screen.findByText("Could not load correct rates.")).toBeInTheDocument();
     rerender(<SettingsDialog {...props} open={false} />);
     vi.mocked(studyRepository.getCorrectRates).mockResolvedValue({
-      recent20: { correct: 15, total: 20 }, recent100: { correct: 60, total: 100 }
+      lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 }, recent20: { correct: 15, total: 20 }, recent100: { correct: 60, total: 100 }
     });
     rerender(<SettingsDialog {...props} />);
     expect(await screen.findByText("75% · 15/20")).toBeInTheDocument();
@@ -91,9 +93,9 @@ describe("SettingsDialog", () => {
     const { rerender } = render(<SettingsDialog {...props} />);
     rerender(<SettingsDialog {...props} open={false} />);
     rerender(<SettingsDialog {...props} />);
-    await screen.findAllByText("No answers yet");
-    await act(async () => resolveOld({ recent20: { correct: 20, total: 20 }, recent100: { correct: 100, total: 100 } }));
+    await screen.findAllByText("0/0");
+    await act(async () => resolveOld({ lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 }, recent20: { correct: 20, total: 20 }, recent100: { correct: 100, total: 100 } }));
     const section = screen.getByRole("region", { name: "Correct rate" });
-    await waitFor(() => expect(within(section).getAllByText("No answers yet")).toHaveLength(2));
+    await waitFor(() => expect(within(section).getAllByText("0/0")).toHaveLength(4));
   });
 });

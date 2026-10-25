@@ -1,4 +1,4 @@
-import type { ClinicalQuestion, Encounter, OptionId } from "../lib/contracts";
+import type { ClinicalQuestion, Encounter, FollowUpMessage, OptionId } from "../lib/contracts";
 import { QuestionFollowUp } from "./QuestionFollowUp";
 
 type Props = {
@@ -9,9 +9,10 @@ type Props = {
   onSelect: (id: OptionId) => void;
   onReveal: () => void;
   onNext: () => void;
+  onFollowUpMessagesChange: (messages: FollowUpMessage[]) => Promise<void>;
 };
 
-export function QuestionView({ question, encounter, mode, busy, onSelect, onReveal, onNext }: Props) {
+export function QuestionView({ question, encounter, mode, busy, onSelect, onReveal, onNext, onFollowUpMessagesChange }: Props) {
   const resolved = Boolean(encounter.completedAt);
   const lastWrongId = [...encounter.selectedOptionIds].reverse().find((id) => id !== question.correctOptionId);
   const lastWrong = question.options.find((option) => option.id === lastWrongId);
@@ -78,7 +79,11 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
                 ))}
               </div>
             </details>
-            <QuestionFollowUp question={question} />
+            <QuestionFollowUp
+              question={question}
+              messages={encounter.followUpMessages ?? []}
+              onMessagesChange={onFollowUpMessagesChange}
+            />
             <button className="primary-button" type="button" disabled={busy} onClick={onNext}>Next question</button>
           </section>
         )}

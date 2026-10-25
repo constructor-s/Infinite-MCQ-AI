@@ -84,6 +84,7 @@ export const generateQuestionRequestSchema = z.object({
 export type GenerateQuestionRequest = z.infer<typeof generateQuestionRequestSchema>;
 
 export type EncounterMode = "fresh" | "review";
+export type FollowUpMessage = { role: "user" | "assistant"; text: string };
 export type Encounter = {
   id: string;
   questionId: string;
@@ -98,6 +99,7 @@ export type Encounter = {
   selectedOptionIds: OptionId[];
   revealedAnswer: boolean;
   eventuallyCorrect: boolean;
+  followUpMessages?: FollowUpMessage[];
 };
 
 export type ModelOption = {

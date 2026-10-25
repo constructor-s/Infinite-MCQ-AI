@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IWorldDatabase } from "./database";
 import { LocalStudyRepository } from "./repository";
 import { makeQuestion } from "../test/fixtures";
@@ -17,6 +17,7 @@ describe("LocalStudyRepository", () => {
 
   it("returns empty correct rates without answer history", async () => {
     expect(await repository.getCorrectRates()).toEqual({
+      lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 },
       recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 }
     });
   });
@@ -37,6 +38,7 @@ describe("LocalStudyRepository", () => {
       { ...base, id: "review", mode: "review", firstAttemptCorrect: true, startedAt: "2027-01-01T00:00:01Z" }
     ]);
     expect(await repository.getCorrectRates()).toEqual({
+      lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 },
       recent20: { correct: 10, total: 20 }, recent100: { correct: 90, total: 100 }
     });
   });
@@ -55,8 +57,38 @@ describe("LocalStudyRepository", () => {
     await repository.recordSelection(review.id, "A", true);
     await repository.beginEncounter(makeQuestion(), "fresh");
     expect(await repository.getCorrectRates()).toEqual({
+      lastHour: { correct: 1, total: 4 }, last24Hours: { correct: 1, total: 4 },
       recent20: { correct: 1, total: 4 }, recent100: { correct: 1, total: 4 }
     });
+  });
+
+  it("includes time boundaries and more than 100 answers in time windows", async () => {
+    const now = Date.parse("2026-10-25T12:00:00Z");
+    const base = await repository.beginEncounter(makeQuestion(), "fresh");
+    const row = (id: string, age: number, correct = true): Encounter => ({
+      ...base, id, startedAt: new Date(now - age).toISOString(), firstAttemptCorrect: correct
+    });
+    await database.encounters.clear();
+    await database.encounters.bulkPut([
+      ...Array.from({ length: 101 }, (_, i) => row(`recent-${i}`, 1000)),
+      row("hour-boundary", 3_600_000, false),
+      row("outside-hour", 3_600_001),
+      row("day-boundary", 86_400_000, false),
+      row("outside-day", 86_400_001),
+      row("future", -1000),
+      { ...row("review", 1000), mode: "review" },
+      { ...row("unanswered", 1000), firstAttemptCorrect: undefined },
+      { ...row("reveal", 1000), revealedAnswer: true }
+    ]);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+    try {
+      const rates = await repository.getCorrectRates();
+      expect(rates.lastHour).toEqual({ correct: 101, total: 103 });
+      expect(rates.last24Hours).toEqual({ correct: 102, total: 105 });
+      expect(rates.recent100.total).toBe(100);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("persists queue order and removes completed queue items", async () => {
@@ -90,6 +122,28 @@ describe("LocalStudyRepository", () => {
     expect(duplicate.selectedOptionIds).toEqual(["B"]);
     expect(correct.selectedOptionIds).toEqual(["B", "A"]);
     expect(await database.encounters.count()).toBe(1);
+  });
+
+  it("restores a completed fresh encounter while its question remains queued", async () => {
+    const question = makeQuestion();
+    await repository.enqueue(question);
+    const encounter = await repository.beginEncounter(question, "fresh");
+    const completed = await repository.recordSelection(encounter.id, "A", true);
+    expect(await repository.beginEncounter(question, "fresh")).toEqual(completed);
+
+    await repository.removeFromQueue(question.id);
+    expect((await repository.beginEncounter(question, "fresh")).id).not.toBe(encounter.id);
+  });
+
+  it("persists follow-up messages on an encounter", async () => {
+    const encounter = await repository.beginEncounter(makeQuestion(), "fresh");
+    const messages = [
+      { role: "user" as const, text: "Why?" },
+      { role: "assistant" as const, text: "Because of the ECG findings." }
+    ];
+    const updated = await repository.setFollowUpMessages(encounter.id, messages);
+    expect(updated.followUpMessages).toEqual(messages);
+    expect((await database.encounters.get(encounter.id))?.followUpMessages).toEqual(messages);
   });
 
   it("prioritizes a missed question in review mode", async () => {

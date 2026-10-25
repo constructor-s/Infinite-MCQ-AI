@@ -89,10 +89,10 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
           <div aria-live="polite">
             {ratesError ? <p className="inline-error">{ratesError}</p> : !correctRates ? <p className="settings-note">Loading correct rates…</p> : (
               <dl className="correct-rates">
-                {([["Recent 20", correctRates.recent20], ["Recent 100", correctRates.recent100]] as const).map(([label, rate]) => (
+                {([["Recent 20", correctRates.recent20], ["Recent 100", correctRates.recent100], ["Last 1 hour", correctRates.lastHour], ["Last 24 hours", correctRates.last24Hours]] as const).map(([label, rate]) => (
                   <div key={label}>
                     <dt>{label}</dt>
-                    <dd>{rate.total ? `${Math.round(rate.correct / rate.total * 100)}% · ${rate.correct}/${rate.total}` : "No answers yet"}</dd>
+                    <dd>{rate.total > 0 && `${Math.round(rate.correct / rate.total * 100)}% · `}{rate.correct}/{rate.total}</dd>
                   </div>
                 ))}
               </dl>

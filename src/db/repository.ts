@@ -1,28 +1,35 @@
 import { db, type GenerationEvent, type IWorldDatabase } from "./database";
-import type { ClinicalQuestion, Encounter, EncounterMode, OptionId } from "../lib/contracts";
+import type { ClinicalQuestion, Encounter, EncounterMode, FollowUpMessage, OptionId } from "../lib/contracts";
 import { createLocalId } from "../lib/createLocalId";
 import { blueprint } from "../lib/blueprint";
 import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
 
 export type CorrectRate = { correct: number; total: number };
-export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate };
+export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate; lastHour: CorrectRate; last24Hours: CorrectRate };
 
 export class LocalStudyRepository {
   constructor(private database: IWorldDatabase = db) {}
 
   async getCorrectRates(): Promise<CorrectRates> {
-    const encounters = await this.database.encounters.orderBy("startedAt").reverse()
-      .filter((encounter) => encounter.mode === "fresh" &&
-        (encounter.firstAttemptCorrect !== undefined || encounter.revealedAnswer))
-      .limit(100).toArray();
-    const summarize = (limit: number): CorrectRate => {
-      const window = encounters.slice(0, limit);
-      return {
-        correct: window.filter((encounter) => encounter.firstAttemptCorrect === true && !encounter.revealedAnswer).length,
-        total: window.length
-      };
+    const now = Date.now();
+    const eligible = (encounter: Encounter) => encounter.mode === "fresh" &&
+      (encounter.firstAttemptCorrect !== undefined || encounter.revealedAnswer);
+    const [encounters, dayEncounters] = await Promise.all([
+      this.database.encounters.orderBy("startedAt").reverse().filter(eligible).limit(100).toArray(),
+      this.database.encounters.where("startedAt")
+        .between(new Date(now - 24 * 60 * 60 * 1000).toISOString(), new Date(now).toISOString(), true, true)
+        .filter(eligible).toArray()
+    ]);
+    const summarize = (window: Encounter[]): CorrectRate => ({
+      correct: window.filter((encounter) => encounter.firstAttemptCorrect === true && !encounter.revealedAnswer).length,
+      total: window.length
+    });
+    return {
+      recent20: summarize(encounters.slice(0, 20)),
+      recent100: summarize(encounters),
+      lastHour: summarize(dayEncounters.filter((encounter) => Date.parse(encounter.startedAt) >= now - 60 * 60 * 1000)),
+      last24Hours: summarize(dayEncounters)
     };
-    return { recent20: summarize(20), recent100: summarize(100) };
   }
 
   async getFreshQuestions(): Promise<ClinicalQuestion[]> {
@@ -105,11 +112,15 @@ export class LocalStudyRepository {
   }
 
   async beginEncounter(question: ClinicalQuestion, mode: EncounterMode): Promise<Encounter> {
-    const existing = await this.database.encounters
+    const encounters = await this.database.encounters
       .where("[questionId+mode]")
       .equals([question.id, mode])
-      .filter((encounter) => !encounter.completedAt)
-      .first();
+      .toArray();
+    const queued = mode === "fresh" && Boolean(
+      await this.database.queueItems.where("questionId").equals(question.id).first()
+    );
+    const candidates = queued ? encounters : encounters.filter((encounter) => !encounter.completedAt);
+    const existing = candidates.sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
     if (existing) return existing;
     const now = new Date().toISOString();
     const encounter: Encounter = {
@@ -126,6 +137,20 @@ export class LocalStudyRepository {
     };
     await this.database.encounters.add(encounter);
     return encounter;
+  }
+
+  async setFollowUpMessages(encounterId: string, messages: FollowUpMessage[]): Promise<Encounter> {
+    return this.database.transaction("rw", this.database.encounters, async () => {
+      const encounter = await this.database.encounters.get(encounterId);
+      if (!encounter) throw new Error("Encounter not found");
+      const updated = {
+        ...encounter,
+        followUpMessages: structuredClone(messages),
+        updatedAt: new Date().toISOString()
+      };
+      await this.database.encounters.put(updated);
+      return updated;
+    });
   }
 
   async recordSelection(encounterId: string, optionId: OptionId, correct: boolean): Promise<Encounter> {

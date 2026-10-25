@@ -1,11 +1,15 @@
 import { type FormEvent, useState } from "react";
-import type { ClinicalQuestion } from "../lib/contracts";
+import type { ClinicalQuestion, FollowUpMessage } from "../lib/contracts";
 
-type ChatMessage = { role: "user" | "assistant"; text: string };
+type Props = {
+  question: ClinicalQuestion;
+  messages: FollowUpMessage[];
+  onMessagesChange: (messages: FollowUpMessage[]) => Promise<void>;
+};
 
-export function QuestionFollowUp({ question }: { question: ClinicalQuestion }) {
+export function QuestionFollowUp({ question, messages: initialMessages, onMessagesChange }: Props) {
   const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<FollowUpMessage[]>(initialMessages);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -13,7 +17,7 @@ export function QuestionFollowUp({ question }: { question: ClinicalQuestion }) {
     event.preventDefault();
     const text = draft.trim();
     if (!text || sending) return;
-    const nextMessages: ChatMessage[] = [...messages, { role: "user", text }];
+    const nextMessages: FollowUpMessage[] = [...messages, { role: "user", text }];
     setMessages(nextMessages);
     setDraft("");
     setSending(true);
@@ -26,7 +30,9 @@ export function QuestionFollowUp({ question }: { question: ClinicalQuestion }) {
       });
       const body = await response.json() as { answer?: string; error?: { message?: string } };
       if (!response.ok || !body.answer) throw new Error(body.error?.message || "Follow-up is unavailable");
-      setMessages((current) => [...current, { role: "assistant", text: body.answer! }]);
+      const completedMessages: FollowUpMessage[] = [...nextMessages, { role: "assistant", text: body.answer }];
+      await onMessagesChange(completedMessages);
+      setMessages(completedMessages);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Follow-up is unavailable");
     } finally {
