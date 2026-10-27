@@ -68,7 +68,7 @@ export function StatusBar({
           {formatElapsed(questionSeconds)}
         </span>
       )}
-      <button className="icon-button" type="button" aria-label="Open settings" onClick={onOpenSettings}>⚙</button>
+      <button className="icon-button" type="button" aria-label="Open settings" onClick={onOpenSettings}>⚙︎</button>
     </header>
   );
 }
