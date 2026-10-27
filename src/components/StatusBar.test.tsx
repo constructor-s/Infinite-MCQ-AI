@@ -1,13 +1,8 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StatusBar } from "./StatusBar";
 
 const baseProps = {
-  ready: 4,
-  target: 10,
-  generating: false,
-  offline: false,
-  reviewMode: false,
   onOpenSettings: vi.fn()
 };
 
@@ -19,6 +14,13 @@ describe("StatusBar question timer", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("keeps settings accessible without queue status", () => {
+    render(<StatusBar {...baseProps} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    expect(baseProps.onOpenSettings).toHaveBeenCalled();
   });
 
   it("shows persisted elapsed time and advances for an active question", () => {

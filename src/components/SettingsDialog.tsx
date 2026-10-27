@@ -5,6 +5,12 @@ import { studyRepository, type CorrectRates } from "../db/repository";
 
 type Props = {
   open: boolean;
+  ready: number;
+  target: number;
+  generating: boolean;
+  offline: boolean;
+  reviewMode: boolean;
+  generationError?: string;
   selectedModel: string;
   theme: Theme;
   onClose: () => void;
@@ -17,7 +23,7 @@ const FALLBACK_MODELS: ModelOption[] = [
   { id: "gemini-3.8-flash", label: "Quality · Gemini 3.8 Flash", description: "Stronger reasoning with potentially lower throughput", available: true }
 ];
 
-export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectModel, onSelectTheme }: Props) {
+export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
   const [error, setError] = useState("");
   const [correctRates, setCorrectRates] = useState<CorrectRates | null>(null);
@@ -43,6 +49,14 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
   }, [open]);
 
   if (!open) return null;
+
+  let status = `Ready · ${ready}/${target}`;
+  if (offline && reviewMode) status = "Offline · Review";
+  else if (offline) status = `Offline · ${ready}/${target} ready`;
+  else if (generating) status = `Generating · ${ready}/${target} ready`;
+  else if (generationError && reviewMode) status = "Generation paused · Review";
+  else if (generationError) status = `Generation paused · ${ready}/${target} ready`;
+
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -101,6 +115,10 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
           <p className="settings-note">First try on fresh questions only. Reveals count as incorrect; reviews are excluded. Uses history on this device.</p>
         </section>
         {error && <p className="inline-error" role="alert">{error}</p>}
+        <div className="settings-status status-copy" role="status" aria-live="polite">
+          <span className={`status-dot ${generating ? "is-generating" : ""}`} aria-hidden="true" />
+          {status}
+        </div>
       </section>
     </div>
   );

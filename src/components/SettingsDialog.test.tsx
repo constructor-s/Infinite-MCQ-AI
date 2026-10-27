@@ -7,6 +7,11 @@ vi.mock("../db/repository", () => ({ studyRepository: { getCorrectRates: vi.fn()
 
 const props = {
   open: true,
+  ready: 4,
+  target: 10,
+  generating: false,
+  offline: false,
+  reviewMode: false,
   selectedModel: "gemini-3.5-flash-lite",
   theme: "light" as const,
   onClose: vi.fn(),
@@ -27,11 +32,32 @@ describe("SettingsDialog", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ models: [] }), { status: 200 })));
   });
 
+  it("updates queue status at the bottom, after model errors, and hides it when closed", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("Models offline"));
+    const { rerender } = render(<SettingsDialog {...props} />);
+    await screen.findByRole("alert");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Ready · 4/10");
+    expect(screen.getByRole("dialog").lastElementChild).toBe(status);
+    for (const [state, text] of [
+      [{ generating: true }, "Generating · 4/10 ready"],
+      [{ offline: true }, "Offline · 4/10 ready"],
+      [{ offline: true, reviewMode: true }, "Offline · Review"],
+      [{ generationError: "Failed" }, "Generation paused · 4/10 ready"],
+      [{ generationError: "Failed", reviewMode: true }, "Generation paused · Review"]
+    ] as const) {
+      rerender(<SettingsDialog {...props} {...state} />);
+      expect(screen.getByRole("status")).toHaveTextContent(text);
+    }
+    rerender(<SettingsDialog {...props} open={false} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
   it("shows auto, light, and dark choices and reports a theme change", async () => {
     const onSelectTheme = vi.fn(async () => undefined);
     render(
       <SettingsDialog
-        open
+        {...props}
         selectedModel="gemini-3.5-flash-lite"
         theme="light"
         onClose={vi.fn()}

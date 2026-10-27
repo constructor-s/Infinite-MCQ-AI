@@ -190,10 +190,6 @@ export default function App() {
   return (
     <div className="app">
       <StatusBar
-        {...progress}
-        offline={!online}
-        reviewMode={mode === "review"}
-        error={generationError}
         questionStartedAt={encounter?.startedAt}
         questionCompletedAt={encounter?.completedAt}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -222,6 +218,10 @@ export default function App() {
 
       <footer>AI-generated educational material may contain errors. Verify clinical guidance.</footer>
       <SettingsDialog
+        {...progress}
+        offline={!online}
+        reviewMode={mode === "review"}
+        generationError={generationError}
         open={settingsOpen}
         selectedModel={selectedModel}
         theme={theme}
