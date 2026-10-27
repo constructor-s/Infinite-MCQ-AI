@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GenerateQuestionRequest, GeneratedQuestion } from "../lib/contracts";
+import { clinicalQuestionSchema, generateQuestionRequestSchema, generatedQuestionSchema, type GenerateQuestionRequest, type GeneratedQuestion } from "../lib/contracts";
+import { PROMPT_VERSION } from "../lib/blueprint";
 import { makeQuestion } from "../test/fixtures";
 import { generateQuestion, GenerationError, makePrompt, validateQuestionQuality } from "./questionGeneration";
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion";
@@ -14,7 +15,7 @@ afterEach(() => { generateContent.mockReset(); vi.restoreAllMocks(); });
 
 function request(): GenerateQuestionRequest {
   const entry = eligibility.find((e) => e.objectiveId === "14" && e.physicianActivity === "management" && e.careDimension === "acute")!;
-  return { topicId: "mcc.14", model: "gemini-3.5-flash-lite", difficulty: 3, avoidSignatures: [], enablingObjectiveId: entry.enablingObjectiveId,
+  return { topicId: "mcc.14", model: "gemini-3.5-flash-lite", avoidSignatures: [], enablingObjectiveId: entry.enablingObjectiveId,
     blueprint: { discipline: entry.discipline, physicianActivity: entry.physicianActivity, careDimension: entry.careDimension, cognitiveTask: entry.cognitiveTasks[0], mccObjectiveIds: ["14"] } };
 }
 
@@ -26,13 +27,55 @@ function generated(): GeneratedQuestion {
 describe("question generation safeguards", () => {
   it("grounds the prompt in the exact eligible task and enabling objective", () => {
     const entry = eligibility.find((e) => e.objectiveId === "14" && e.physicianActivity === "management")!;
-    const input = { topicId: "mcc.14", blueprint: { discipline: entry.discipline, physicianActivity: entry.physicianActivity, careDimension: entry.careDimension, cognitiveTask: entry.cognitiveTasks[0], mccObjectiveIds: ["14"] }, enablingObjectiveId: entry.enablingObjectiveId, model: "gemini-3.5-flash-lite" as const, difficulty: 3, avoidSignatures: [] };
+    const input = { topicId: "mcc.14", blueprint: { discipline: entry.discipline, physicianActivity: entry.physicianActivity, careDimension: entry.careDimension, cognitiveTask: entry.cognitiveTasks[0], mccObjectiveIds: ["14"] }, enablingObjectiveId: entry.enablingObjectiveId, model: "gemini-3.5-flash-lite" as const, avoidSignatures: [] };
     const prompt = JSON.parse(makePrompt(input));
     expect(prompt.assignment).toEqual(input.blueprint);
     expect(prompt.objective.enablingObjective).toEqual(sourceObjectivesById.get("14")!.enablingObjectives.find((e) => e.id === input.enablingObjectiveId));
     expect(prompt.originalStyleExample).toHaveProperty("bestAnswer");
     expect(makePrompt(input, 0)).not.toEqual(makePrompt(input, 1));
     expect(() => makePrompt({ ...input, blueprint: { ...input.blueprint, mccObjectiveIds: ["not-an-objective"] } })).toThrow(/eligible/i);
+  });
+
+  it("sends the MCCQE level, strong distractor and review instructions to the provider", async () => {
+    const input = request();
+    generateContent.mockResolvedValue({ text: JSON.stringify({ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }) });
+    const result = await generateQuestion(input, "test-key");
+    const prompt = JSON.parse(generateContent.mock.calls[0][0].contents);
+    expect(prompt).not.toHaveProperty("difficulty");
+    expect(result).not.toHaveProperty("difficulty");
+    expect(generateContent.mock.calls[0][0].config.responseJsonSchema.properties).not.toHaveProperty("difficulty");
+    expect(prompt.levelInstruction).toMatch(/graduating medical student entering supervised practice in Canada/);
+    expect(prompt.levelInstruction).toMatch(/application of the supplied findings/);
+    expect(prompt.levelInstruction).not.toMatch(/numeric|difficulty level/i);
+    expect(prompt.answerInstruction).toMatch(/exactly five homogeneous choices: one unambiguously best answer and four distractors/);
+    expect(prompt.answerInstruction).toMatch(/at least one strong distractor/);
+    expect(prompt.answerInstruction).toMatch(/specific finding, timing consideration, contraindication or decision priority supplied in the case/);
+    expect(prompt.answerInstruction).toMatch(/short explanation identify the decisive distinction/);
+    expect(prompt.answerInstruction).toMatch(/Keep hints from disclosing the decisive distinction/);
+    expect(prompt.qualityInstruction).toMatch(/If both remain defensible, revise the case, stem or options/);
+    expect(prompt.qualityInstruction).toMatch(/Do not create difficulty by omitting necessary information/);
+    expect(result.promptVersion).toBe(PROMPT_VERSION);
+  });
+
+  it("preserves five unique choices and a single correct-option identifier in the schema", () => {
+    const question = generated();
+    expect(generatedQuestionSchema.safeParse(question).success).toBe(true);
+    expect(generatedQuestionSchema.safeParse({ ...question, options: question.options.slice(0, 4) }).success).toBe(false);
+    expect(generatedQuestionSchema.safeParse({ ...question, correctOptionId: ["A", "B"] }).success).toBe(false);
+    expect(generatedQuestionSchema.safeParse({ ...question, options: [...question.options.slice(0, 4), question.options[0]] }).success).toBe(false);
+  });
+
+  it("accepts questions and requests without difficulty and strips legacy difficulty", () => {
+    const input = request();
+    const question = makeQuestion();
+    const generatedQuestion = generated();
+    expect(generateQuestionRequestSchema.parse(input)).toEqual(input);
+    expect(generateQuestionRequestSchema.parse({ ...input, difficulty: 3 })).toEqual(input);
+    expect(clinicalQuestionSchema.parse(question)).toEqual(question);
+    expect(clinicalQuestionSchema.parse({ ...question, difficulty: 3 })).toEqual(question);
+    const parsed = generatedQuestionSchema.parse(generatedQuestion);
+    expect(parsed).not.toHaveProperty("difficulty");
+    expect(generatedQuestionSchema.parse({ ...generatedQuestion, difficulty: 3 })).toEqual(parsed);
   });
 
   it("rejects a duplicate vignette signature", () => {

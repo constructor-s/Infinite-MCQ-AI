@@ -31,3 +31,34 @@ The last three task-instruction additions were informed by this review and have 
 Reproduce the evaluation with `node scripts/evaluate-generation.mjs https://localhost:5173 /tmp/iworld-generation-evaluation.json`. The script resumes successful saved requests and accepts an optional comma-separated list of case IDs as its third argument. It consumes configured Gemini quota and leaves a JSON artifact for review. The rubric and requests live in `curriculum/evaluation.json`; `curriculum/practice-calibration.json` records structural observations for all 55 supplied official examples without reproducing them.
 
 Browser automation was unavailable because no browser was connected. Component tests verified paragraph rendering, hints, answer disclosure, explanations and Next controls. Keyboard and scrolling handlers were unchanged.
+
+
+## Prompt v3 evaluation — October 26, 2026
+
+The prompt now defines the graduating-student MCCQE target, requires one best answer and four distractors including a strong alternative, and asks for an explicit distinguishing explanation and an internal ambiguity check. Difficulty 3 remains an intended target, not a measured difficulty. The evaluation rubric was advanced to v2 to prevent reuse of the earlier sample.
+
+Validation passed all 83 tests and the production build (including TypeScript). A fresh live run using Gemini 3.5 Flash-Lite returned 12/12 HTTP 200 responses across all six disciplines and 12 cognitive tasks. All items carried prompt version `mccqe-paragraph-v3`, five choices and a single correct-option identifier. The local artifact is `/tmp/iworld-mccqe-v3-evaluation.json`; it is temporary and is not committed. Reproduce with the evaluation command above using a fresh output path and a configured local server.
+
+An agent inspected the generated cases, options, hints and explanations against the revised rubric. This was a qualitative prompt-adherence review, not independent clinical validation or a measured difficulty study. Findings:
+
+| Held-out assignment | Prompt-adherence finding |
+| --- | --- |
+| Medicine / laboratory interpretation | Contains a plausible competing cause with a stated discriminator, but describes a “45-week-old” patient who reports her own history. Fails internal coherence. |
+| Surgery / procedural intervention | Contrasts operative intervention with a conservative trial using explicit imaging findings; hints disclose the distinguishing finding. |
+| Pediatrics / history priorities | Tests developmental trajectory, but the explanation and pearl need clinical review; convincing-alternative quality is not established. |
+| OBGYN / informed consent | Distractors remain conspicuously inappropriate; an answer-letter reference becomes incorrect after shuffling. |
+| Psychiatry / capacity and consent | States the decision-specific comprehension problem, but legal claims lack an explicit jurisdiction and distractors are weak. |
+| PHELO / statistical interpretation | Calculation gives 180/(180+80), approximately 69%; an 80% distractor explanation incorrectly describes subtracting a 10% false-positive rate from 100%. |
+| Medicine / counselling | Distractors are conspicuously inappropriate; explanation uses letters that no longer match shuffled options. |
+| Surgery / difficult news | Most alternatives are conspicuously dismissive; hints reveal evaluations of the choices and explanation uses an answer letter. |
+| Pediatrics / health literacy | Weak alternatives and hints that reveal their flaws; explanation refers to incorrect letters after shuffling. |
+| OBGYN / treatment choice | Includes a competing action that its own explanation says is indicated. Single-best-answer priority is insufficiently established; needs clinical review. |
+| Psychiatry / diagnostic criteria | Uses duration and symptom pattern to distinguish alternatives; explanation claims five symptoms while the vignette lists six. |
+| PHELO / Canadian obligations | Includes a plausible reporting alternative, but several other choices are implausible and legal/clinical accuracy remains unverified. |
+
+The live sample does not pass the full content rubric. Strong-distractor quality, non-revealing hints, prose free of answer-letter references, and consistent explanations remain unreliable despite the explicit instructions. No semantic acceptance gate or second reviewer was added; successful schema validation must not be interpreted as proof of clinical correctness, single-best-answer validity or calibrated difficulty. Independent clinical review and learner-performance data remain outstanding.
+
+
+## Prompt v4 simplification
+
+Numeric difficulty was removed from generation requests, prompts and question schemas. The graduating-student MCCQE target and answer-quality instructions remain. Legacy saved questions retain any stored difficulty property, which is ignored and stripped when parsed; the database and question schema versions are unchanged. Historical v3 results above describe the prompt used at that time. No new live evaluation was run for this metadata removal.

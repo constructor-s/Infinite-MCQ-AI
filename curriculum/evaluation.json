@@ -1,8 +1,11 @@
 {
-  "version": "offline-evaluation-v1",
+  "version": "offline-evaluation-v2",
   "purpose": "Held-out assignment requests and manual rubric. Not imported by prompts or the client.",
   "calibrationSource": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
   "rubric": [
+    "The item tests application of findings at graduating-medical-student MCCQE level, without specialist trivia or missing information creating difficulty.",
+    "Exactly one answer is defensibly best, with four distractors and at least one convincing alternative distinguished by an explicit case fact or priority.",
+    "Explanations identify the decisive distinction and why the strongest distractor is inferior; hints do not disclose that distinction outright.",
     "The primary decision genuinely tests the assigned cognitive task and physician activity.",
     "The assigned care dimension is central, not an incidental background fact.",
     "The scenario fits the selected discipline and source enabling objective.",
@@ -17,7 +20,6 @@
       "request": {
         "topicId": "mcc.42-1",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-4",
         "blueprint": {
@@ -36,7 +38,6 @@
       "request": {
         "topicId": "mcc.1",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-5",
         "blueprint": {
@@ -55,7 +56,6 @@
       "request": {
         "topicId": "mcc.21",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-1",
         "blueprint": {
@@ -74,7 +74,6 @@
       "request": {
         "topicId": "mcc.role:communicator",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-13",
         "blueprint": {
@@ -93,7 +92,6 @@
       "request": {
         "topicId": "mcc.21-1",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-6",
         "blueprint": {
@@ -112,7 +110,6 @@
       "request": {
         "topicId": "mcc.78-2",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-7",
         "blueprint": {
@@ -131,7 +128,6 @@
       "request": {
         "topicId": "mcc.4",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-6",
         "blueprint": {
@@ -150,7 +146,6 @@
       "request": {
         "topicId": "mcc.25",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-1",
         "blueprint": {
@@ -169,7 +164,6 @@
       "request": {
         "topicId": "mcc.role:communicator",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-13",
         "blueprint": {
@@ -188,7 +182,6 @@
       "request": {
         "topicId": "mcc.82",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-5",
         "blueprint": {
@@ -207,7 +200,6 @@
       "request": {
         "topicId": "mcc.59-1",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-1",
         "blueprint": {
@@ -226,7 +218,6 @@
       "request": {
         "topicId": "mcc.74-2",
         "model": "gemini-3.5-flash-lite",
-        "difficulty": 3,
         "avoidSignatures": [],
         "enablingObjectiveId": "enabling-3",
         "blueprint": {

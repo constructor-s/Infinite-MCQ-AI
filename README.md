@@ -67,3 +67,5 @@ Questions, attempts, the queue, and the selected model remain in that browser's 
 ## Current boundaries
 
 The objective source snapshot is complete for its import date; eligibility mappings are application-authored and require clinical review. AI-generated educational content may be wrong and must not replace clinical guidance. Authentication-backed sync, cloud storage, analytics UI, and data export/import remain deferred.
+
+Generation targets graduating medical students entering supervised practice in Canada. Five choices include one best answer and four distractors, with at least one strong alternative distinguished by supplied case facts or priorities. Numeric difficulty ratings are not used. Prompt and schema checks cannot establish clinical correctness or actual difficulty, which require content review and eventually learner-performance data.

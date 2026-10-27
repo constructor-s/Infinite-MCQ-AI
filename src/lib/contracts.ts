@@ -17,7 +17,6 @@ export const topicDefinitionSchema = z.object({
 export type TopicDefinition = z.infer<typeof topicDefinitionSchema>;
 
 const questionFieldsSchema = z.object({
-  difficulty: z.number().int().min(1).max(5),
   vignette: z.string().trim().min(40).max(3500),
   blueprint: blueprintTagsSchema,
   stem: z.string().min(15),
@@ -77,7 +76,6 @@ export const generateQuestionRequestSchema = z.object({
   blueprint: blueprintTagsSchema,
   enablingObjectiveId: z.string().min(1),
   model: z.enum(["gemini-3.5-flash-lite", "gemini-3.8-flash"]),
-  difficulty: z.number().int().min(1).max(5).default(3),
   avoidSignatures: z.array(z.string().min(3).max(120)).max(5).default([])
 });
 

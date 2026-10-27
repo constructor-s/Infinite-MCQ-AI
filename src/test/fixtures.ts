@@ -11,7 +11,6 @@ export function makeQuestion(overrides: Partial<ClinicalQuestion> = {}): Clinica
     blueprintVersion: blueprint.version, curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION,
     enablingObjectiveId: "enabling-1",
     blueprint: { discipline: "medicine", physicianActivity: "management", careDimension: "acute", cognitiveTask: "initial_stabilization", mccObjectiveIds: ["14"] },
-    difficulty: 3,
     vignette: "A 62-year-old patient has ongoing central chest pressure for forty minutes and is diaphoretic. ECG shows ST elevation in leads II, III, and aVF.",
     stem: "Which of the following is the most appropriate next step?",
     options: [

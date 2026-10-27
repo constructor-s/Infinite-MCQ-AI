@@ -19,7 +19,7 @@ describe("POST /api/questions/generate", () => {
     const response = await handler(new Request("http://localhost/api/questions/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topicId: "cardio.acs", model: "gemini-3.5-flash-lite", difficulty: 3, avoidSignatures: [] })
+      body: JSON.stringify({ topicId: "cardio.acs", model: "gemini-3.5-flash-lite", avoidSignatures: [] })
     }));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ error: { code: "MISSING_API_KEY" } });

@@ -73,7 +73,6 @@ export class QuestionQueueService {
           body: JSON.stringify({
             ...selection,
             model,
-            difficulty: 3,
             avoidSignatures: recentQuestions.map((question) => question.vignetteSignature).slice(0, 5)
           })
         });
