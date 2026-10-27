@@ -1,8 +1,10 @@
 import { db, type GenerationEvent, type IWorldDatabase } from "./database";
 import type { ClinicalQuestion, Encounter, EncounterMode, FollowUpMessage, OptionId } from "../lib/contracts";
 import { createLocalId } from "../lib/createLocalId";
-import { blueprint } from "../lib/blueprint";
+import { blueprint, blueprintTagsSchema } from "../lib/blueprint";
 import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
+
+export type RecentQuestionTopic = ClinicalQuestion & { outcome: "correct" | "incorrect" | "unknown" };
 
 export type CorrectRate = { correct: number; total: number };
 export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate; lastHour: CorrectRate; last24Hours: CorrectRate };
@@ -95,6 +97,27 @@ export class LocalStudyRepository {
         Object.assign(statsFor(id), { attempts: values.length, errors: values.filter((correct) => !correct).length });
       }
       return { questions, objectiveStats };
+    });
+  }
+
+  async getRecentQuestionTopics(limit = 20): Promise<RecentQuestionTopic[]> {
+    return this.database.transaction("r", this.database.encounters, this.database.questions, async () => {
+      const completed = await this.database.encounters.where("completedAt").above("")
+        .reverse().sortBy("completedAt");
+      const latest = new Map<string, Encounter>();
+      for (const encounter of completed) {
+        if (!latest.has(encounter.questionId)) latest.set(encounter.questionId, encounter);
+      }
+      const ids = [...latest.keys()];
+      const questions = await this.database.questions.bulkGet(ids);
+      return questions.filter((question): question is ClinicalQuestion =>
+        Boolean(question) && question?.schemaVersion === 2 && blueprintTagsSchema.safeParse(question.blueprint).success
+      ).slice(0, limit).map((question) => {
+        const encounter = latest.get(question.id)!;
+        const outcome = encounter.revealedAnswer || encounter.firstAttemptCorrect === false ? "incorrect"
+          : encounter.firstAttemptCorrect === true ? "correct" : "unknown";
+        return { ...question, outcome };
+      });
     });
   }
 

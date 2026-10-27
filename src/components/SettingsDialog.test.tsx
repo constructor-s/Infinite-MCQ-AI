@@ -1,9 +1,11 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { RecentQuestionTopic } from "../db/repository";
+import { makeQuestion } from "../test/fixtures";
 import { SettingsDialog } from "./SettingsDialog";
 import { studyRepository, type CorrectRates } from "../db/repository";
 
-vi.mock("../db/repository", () => ({ studyRepository: { getCorrectRates: vi.fn() } }));
+vi.mock("../db/repository", () => ({ studyRepository: { getCorrectRates: vi.fn(), getRecentQuestionTopics: vi.fn() } }));
 
 const props = {
   open: true,
@@ -26,10 +28,50 @@ describe("SettingsDialog", () => {
   });
 
   beforeEach(() => {
+    vi.mocked(studyRepository.getRecentQuestionTopics).mockReset().mockResolvedValue([]);
     vi.mocked(studyRepository.getCorrectRates).mockReset().mockResolvedValue({
       lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 }, recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 }
     });
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ models: [] }), { status: 200 })));
+  });
+
+  it("shows completed question titles and readable dimensions", async () => {
+    vi.mocked(studyRepository.getRecentQuestionTopics).mockResolvedValue([{ ...makeQuestion({
+      topicTitle: "Consent", blueprint: { discipline: "phelo", physicianActivity: "professional_behaviours",
+        careDimension: "psychosocial", cognitiveTask: "capacity_consent", mccObjectiveIds: ["14"] }
+    }), outcome: "correct" }]);
+    render(<SettingsDialog {...props} />);
+    expect(await screen.findByLabelText("Correct")).toHaveClass("is-correct");
+    expect(await screen.findByText("Consent")).toBeInTheDocument();
+    for (const label of ["Population health, ethics, and legal obligations", "Professional behaviours", "Psychosocial", "Capacity / consent"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/ongoing central chest pressure/)).not.toBeInTheDocument();
+  });
+
+  it("labels incorrect and unavailable outcomes without relying on color", async () => {
+    vi.mocked(studyRepository.getRecentQuestionTopics).mockResolvedValue([
+      { ...makeQuestion(), outcome: "incorrect" }, { ...makeQuestion(), outcome: "unknown" }
+    ]);
+    render(<SettingsDialog {...props} />);
+    expect(await screen.findByLabelText("Incorrect")).toHaveClass("is-incorrect");
+    expect(screen.getByLabelText("Result unavailable")).toBeInTheDocument();
+  });
+
+  it("loads history again on reopening and ignores stale results", async () => {
+    let resolveOld!: (questions: RecentQuestionTopic[]) => void;
+    vi.mocked(studyRepository.getRecentQuestionTopics).mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; }));
+    const { rerender } = render(<SettingsDialog {...props} />);
+    expect(screen.getByText("Loading recent question topics…")).toBeInTheDocument();
+    rerender(<SettingsDialog {...props} open={false} />);
+    rerender(<SettingsDialog {...props} />);
+    expect(await screen.findByText("No completed questions yet.")).toBeInTheDocument();
+    await act(async () => resolveOld([{ ...makeQuestion({ topicTitle: "Stale title" }), outcome: "incorrect" }]));
+    expect(screen.queryByText("Stale title")).not.toBeInTheDocument();
+    rerender(<SettingsDialog {...props} open={false} />);
+    vi.mocked(studyRepository.getRecentQuestionTopics).mockRejectedValueOnce(new Error("Unavailable"));
+    rerender(<SettingsDialog {...props} />);
+    expect(await screen.findByText("Could not load recent question topics.")).toBeInTheDocument();
   });
 
   it("updates queue status at the bottom, after model errors, and hides it when closed", async () => {
@@ -38,7 +80,8 @@ describe("SettingsDialog", () => {
     await screen.findByRole("alert");
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("Ready · 4/10");
-    expect(screen.getByRole("dialog").lastElementChild).toBe(status);
+    expect(screen.getByRole("dialog").lastElementChild).toBe(screen.getByRole("region", { name: "Recent question topics" }));
+    expect(status.compareDocumentPosition(screen.getByRole("region", { name: "Recent question topics" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     for (const [state, text] of [
       [{ generating: true }, "Generating · 4/10 ready"],
       [{ offline: true }, "Offline · 4/10 ready"],

@@ -200,3 +200,20 @@ legend { margin-bottom: 9px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.recent-question-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--soft-border); }
+.recent-question-settings h3 { margin: 0 0 9px; font-size: 16px; }
+.recent-question-list { margin: 16px 0 0; padding-left: 24px; }
+.recent-question-list li { padding: 12px 0; border-bottom: 1px solid var(--soft-border); overflow-wrap: anywhere; }
+.recent-question-list li:last-child { border-bottom: 0; }
+.recent-question-list dl { margin: 8px 0 0; font-size: 13px; }
+.recent-question-list dl > div { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 4px; }
+.recent-question-list dt { color: var(--muted); }
+.recent-question-list dt::after { content: ":"; }
+.recent-question-list dd { margin: 0; }
+
+.recent-question-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.recent-question-heading > strong { flex: 1 1 180px; }
+.question-outcome { flex: 0 0 auto; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--hover); }
+.question-outcome.is-correct { color: var(--correct-text); background: var(--correct-bg); }
+.question-outcome.is-incorrect { color: var(--wrong-text); background: var(--wrong-bg); }

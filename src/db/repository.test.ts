@@ -15,6 +15,44 @@ describe("LocalStudyRepository", () => {
 
   afterEach(async () => database.delete());
 
+  it("returns the latest 20 unique valid completed questions, including reveals and reviews", async () => {
+    const questions = Array.from({ length: 23 }, (_, index) => makeQuestion({ id: `question-${index}` }));
+    await database.questions.bulkPut(questions);
+    const base = await repository.beginEncounter(questions[0], "fresh");
+    await database.encounters.clear();
+    const completed = (index: number) => new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString();
+    await database.encounters.bulkPut(questions.map((question, index) => ({
+      ...base, id: `encounter-${index}`, questionId: question.id, completedAt: completed(index),
+      revealedAnswer: true
+    })).reverse());
+    await database.encounters.bulkPut([
+      { ...base, id: "review", mode: "review", questionId: questions[0].id, completedAt: completed(30) },
+      { ...base, id: "missing", questionId: "missing", completedAt: completed(31) },
+      { ...base, id: "unfinished", questionId: questions[1].id, startedAt: completed(32) }
+    ]);
+    await database.questions.update(questions[22].id, { blueprint: undefined } as never);
+    const result = await repository.getRecentQuestionTopics();
+    expect(result.map((question) => question.id)).toEqual([questions[0].id, ...questions.slice(3, 22).reverse().map((question) => question.id)]);
+    expect(await repository.getRecentQuestionTopics(2)).toHaveLength(2);
+  });
+
+  it("reports first-try results from the latest completion and treats reveals as incorrect", async () => {
+    const question = makeQuestion();
+    await database.questions.put(question);
+    const fresh = await repository.beginEncounter(question, "fresh");
+    await repository.recordSelection(fresh.id, "B", false);
+    await repository.recordSelection(fresh.id, "A", true);
+    expect((await repository.getRecentQuestionTopics())[0].outcome).toBe("incorrect");
+    const review = await repository.beginEncounter(question, "review");
+    await repository.recordSelection(review.id, "A", true);
+    await database.encounters.update(review.id, { completedAt: "2099-01-01T00:00:00Z" });
+    expect((await repository.getRecentQuestionTopics())[0].outcome).toBe("correct");
+    await database.encounters.update(review.id, { revealedAnswer: true });
+    expect((await repository.getRecentQuestionTopics())[0].outcome).toBe("incorrect");
+    await database.encounters.update(review.id, { revealedAnswer: false, firstAttemptCorrect: undefined });
+    expect((await repository.getRecentQuestionTopics())[0].outcome).toBe("unknown");
+  });
+
   it("returns empty correct rates without answer history", async () => {
     expect(await repository.getCorrectRates()).toEqual({
       lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ModelOption, Theme } from "../lib/contracts";
 import { fetchModels } from "../services/questionQueue";
-import { studyRepository, type CorrectRates } from "../db/repository";
+import { studyRepository, type CorrectRates, type RecentQuestionTopic } from "../db/repository";
 
 type Props = {
   open: boolean;
@@ -23,11 +23,35 @@ const FALLBACK_MODELS: ModelOption[] = [
   { id: "gemini-3.8-flash", label: "Quality · Gemini 3.8 Flash", description: "Stronger reasoning with potentially lower throughput", available: true }
 ];
 
+const dimensionLabels: Record<string, string> = {
+  medicine: "Medicine", surgery: "Surgery", pediatrics: "Pediatrics", obgyn: "Obstetrics / gynecology",
+  psychiatry: "Psychiatry", phelo: "Population health, ethics, and legal obligations",
+  assessment_diagnosis: "Assessment / diagnosis", professional_behaviours: "Professional behaviours",
+  capacity_consent: "Capacity / consent", ecg_interpretation: "ECG interpretation"
+};
+
+function dimensionLabel(value: string): string {
+  return dimensionLabels[value] ?? value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
 export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
+  const [recentQuestions, setRecentQuestions] = useState<RecentQuestionTopic[] | null>(null);
+  const [historyError, setHistoryError] = useState("");
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
   const [error, setError] = useState("");
   const [correctRates, setCorrectRates] = useState<CorrectRates | null>(null);
   const [ratesError, setRatesError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setRecentQuestions(null);
+    setHistoryError("");
+    void studyRepository.getRecentQuestionTopics()
+      .then((questions) => { if (active) setRecentQuestions(questions); })
+      .catch(() => { if (active) setHistoryError("Could not load recent question topics."); });
+    return () => { active = false; };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -119,6 +143,36 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
           <span className={`status-dot ${generating ? "is-generating" : ""}`} aria-hidden="true" />
           {status}
         </div>
+        <section className="recent-question-settings" aria-labelledby="recent-question-title">
+          <h3 id="recent-question-title">Recent question topics</h3>
+          <p className="settings-note">Last 20 completed questions, newest first. Reviews appear once, using the latest completion. Results reflect the first try; reveals count as incorrect.</p>
+          <div aria-live="polite">
+            {historyError ? <p className="inline-error">{historyError}</p> : recentQuestions === null ? (
+              <p className="settings-note">Loading recent question topics…</p>
+            ) : recentQuestions.length === 0 ? (
+              <p className="settings-note">No completed questions yet.</p>
+            ) : (
+              <ol className="recent-question-list">
+                {recentQuestions.map((question) => (
+                  <li key={question.id}>
+                    <div className="recent-question-heading">
+                      <strong>{question.topicTitle}</strong>
+                      <span className={`question-outcome is-${question.outcome}`} aria-label={question.outcome === "correct" ? "Correct" : question.outcome === "incorrect" ? "Incorrect" : "Result unavailable"}>
+                        <span aria-hidden="true">{question.outcome === "correct" ? "✓" : question.outcome === "incorrect" ? "✕" : "?"}</span>
+                      </span>
+                    </div>
+                    <dl>
+                      {([["Discipline", question.blueprint.discipline], ["Physician activity", question.blueprint.physicianActivity],
+                        ["Care dimension", question.blueprint.careDimension], ["Cognitive task", question.blueprint.cognitiveTask]] as const).map(([label, value]) => (
+                        <div key={label}><dt>{label}</dt><dd>{dimensionLabel(value)}</dd></div>
+                      ))}
+                    </dl>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </section>
       </section>
     </div>
   );
