@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ModelOption, Theme } from "../lib/contracts";
 import { fetchModels } from "../services/questionQueue";
 import { studyRepository, type CorrectRates, type RecentQuestionTopic } from "../db/repository";
+import { questionUrl } from "../lib/questionNavigation";
 
 type Props = {
   open: boolean;
@@ -14,6 +15,7 @@ type Props = {
   selectedModel: string;
   theme: Theme;
   onClose: () => void;
+  onOpenQuestion: (questionId: string, encounterId: string) => void;
   onSelectModel: (model: ModelOption["id"]) => Promise<void>;
   onSelectTheme: (theme: Theme) => Promise<void>;
 };
@@ -34,7 +36,7 @@ function dimensionLabel(value: string): string {
   return dimensionLabels[value] ?? value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
+export function SettingsDialog({ open, selectedModel, theme, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
   const [recentQuestions, setRecentQuestions] = useState<RecentQuestionTopic[] | null>(null);
   const [historyError, setHistoryError] = useState("");
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
@@ -156,7 +158,11 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onSelectMo
                 {recentQuestions.map((question) => (
                   <li key={question.id}>
                     <div className="recent-question-heading">
-                      <strong>{question.topicTitle}</strong>
+                      <a href={questionUrl(question.id)} onClick={(event) => {
+                        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                        event.preventDefault();
+                        onOpenQuestion(question.id, question.encounterId);
+                      }}>{question.topicTitle}</a>
                       <span className={`question-outcome is-${question.outcome}`} aria-label={question.outcome === "correct" ? "Correct" : question.outcome === "incorrect" ? "Incorrect" : "Result unavailable"}>
                         <span aria-hidden="true">{question.outcome === "correct" ? "✓" : question.outcome === "incorrect" ? "✕" : "?"}</span>
                       </span>

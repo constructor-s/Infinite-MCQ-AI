@@ -15,6 +15,55 @@ describe("LocalStudyRepository", () => {
 
   afterEach(async () => database.delete());
 
+  it("restores saved encounters without changing queue, timestamps, or statistics", async () => {
+    const question = makeQuestion();
+    await repository.enqueue(question);
+    const first = await repository.beginEncounter(question, "fresh");
+    const completed = await repository.recordSelection(first.id, "A", true);
+    await repository.removeFromQueue(question.id);
+    const review = await repository.beginEncounter(question, "review");
+    await database.encounters.update(review.id, { startedAt: "2099-01-01T00:00:00Z" });
+    const before = {
+      encounters: await database.encounters.toArray(), queue: await database.queueItems.toArray(),
+      rates: await repository.getCorrectRates(), sampling: await repository.getSamplingContext()
+    };
+    expect(await repository.getQuestionById(question.id)).toEqual(question);
+    expect(await repository.getSavedEncounter(question.id, first.id)).toEqual(completed);
+    expect((await repository.getSavedEncounter(question.id))?.id).toBe(review.id);
+    expect((await repository.getRecentQuestionTopics())[0].encounterId).toBe(first.id);
+    expect({
+      encounters: await database.encounters.toArray(), queue: await database.queueItems.toArray(),
+      rates: await repository.getCorrectRates(), sampling: await repository.getSamplingContext()
+    }).toEqual(before);
+  });
+
+  it("never restores an encounter belonging to another question", async () => {
+    const first = makeQuestion();
+    const second = makeQuestion();
+    const own = await repository.beginEncounter(first, "fresh");
+    const foreign = await repository.beginEncounter(second, "fresh");
+    expect(await repository.getSavedEncounter(first.id, foreign.id)).toEqual(own);
+    expect(await repository.getSavedEncounter("missing", foreign.id)).toBeUndefined();
+    expect(await repository.getSavedEncounter(first.id, "deleted-encounter")).toEqual(own);
+  });
+
+  it("rejects missing, obsolete, and invalid saved question records", async () => {
+    const obsolete = { ...makeQuestion(), schemaVersion: 1 };
+    const invalid = { ...makeQuestion(), blueprint: undefined };
+    await database.table("questions").bulkPut([obsolete, invalid]);
+    expect(await repository.getQuestionById("missing")).toBeUndefined();
+    expect(await repository.getQuestionById(obsolete.id)).toBeUndefined();
+    expect(await repository.getQuestionById(invalid.id)).toBeUndefined();
+  });
+
+  it("serializes concurrent encounter creation", async () => {
+    const question = makeQuestion();
+    await repository.enqueue(question);
+    const encounters = await Promise.all(Array.from({ length: 5 }, () => repository.beginEncounter(question, "fresh")));
+    expect(new Set(encounters.map((encounter) => encounter.id)).size).toBe(1);
+    expect(await database.encounters.count()).toBe(1);
+  });
+
   it("returns the latest 20 unique valid completed questions, including reveals and reviews", async () => {
     const questions = Array.from({ length: 23 }, (_, index) => makeQuestion({ id: `question-${index}` }));
     await database.questions.bulkPut(questions);

@@ -3,29 +3,35 @@ import { QuestionView } from "./components/QuestionView";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { StatusBar } from "./components/StatusBar";
 import { studyRepository } from "./db/repository";
-import type { ClinicalQuestion, Encounter, EncounterMode, FollowUpMessage, ModelOption, OptionId, Theme } from "./lib/contracts";
+import type { FollowUpMessage, ModelOption, OptionId, Theme } from "./lib/contracts";
+import { useQuestionNavigation } from "./hooks/useQuestionNavigation";
 import { activateTheme, getStoredTheme, normalizeTheme } from "./lib/theme";
 import { ApiError, QUEUE_TARGET, questionQueue, type QueueProgress } from "./services/questionQueue";
 
 const DEFAULT_PROGRESS: QueueProgress = { ready: 0, target: QUEUE_TARGET, generating: false };
 
 export default function App() {
-  const [question, setQuestion] = useState<ClinicalQuestion | undefined>(undefined);
-  const [encounter, setEncounter] = useState<Encounter | undefined>(undefined);
-  const [mode, setMode] = useState<EncounterMode>("fresh");
+  const { displayed, status: navigationStatus, openQuestion, nextQuestion, resumeWhenReady, retryNavigation, continueStudying, updateEncounter } = useQuestionNavigation();
+  const question = displayed?.question;
+  const encounter = displayed?.encounter;
+  const mode = encounter?.mode ?? "fresh";
   const [progress, setProgress] = useState(DEFAULT_PROGRESS);
   const [generationError, setGenerationError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busyEncounterId, setBusyEncounterId] = useState<string>();
+  const busy = Boolean(encounter && busyEncounterId === encounter.id);
   const [initialized, setInitialized] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelOption["id"]>("gemini-3.5-flash-lite");
   const [theme, setTheme] = useState<Theme>(getStoredTheme);
-  const currentQuestionRef = useRef<ClinicalQuestion | undefined>(undefined);
   const retryTimerRef = useRef<number | undefined>(undefined);
   const retryCountRef = useRef(0);
+  const mountedRef = useRef(false);
 
-  useEffect(() => { currentQuestionRef.current = question; }, [question]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     const deactivateTheme = activateTheme(theme);
@@ -33,35 +39,20 @@ export default function App() {
     return deactivateTheme;
   }, [theme]);
 
-  const loadNextAvailable = useCallback(async (excludeReviewId?: string) => {
-    const fresh = await studyRepository.getFreshQuestions();
-    let next: ClinicalQuestion | undefined = fresh[0];
-    let nextMode: EncounterMode = "fresh";
-    if (!next) {
-      next = await studyRepository.getReviewQuestion(excludeReviewId);
-      nextMode = "review";
-    }
-    if (!next) {
-      setQuestion(undefined);
-      setEncounter(undefined);
-      return;
-    }
-    const nextEncounter = await studyRepository.beginEncounter(next, nextMode);
-    setMode(nextMode);
-    setQuestion(next);
-    setEncounter(nextEncounter);
-  }, []);
-
   const startFill = useCallback(() => {
-    if (!navigator.onLine) return;
+    if (!mountedRef.current || !navigator.onLine) return;
     window.clearTimeout(retryTimerRef.current);
     setGenerationError("");
     void questionQueue.fill((nextProgress) => {
+      if (!mountedRef.current) return;
       setProgress(nextProgress);
-      if (!currentQuestionRef.current && nextProgress.ready > 0) void loadNextAvailable();
+      if (nextProgress.ready > 0) resumeWhenReady();
     }).then(() => {
+      if (!mountedRef.current) return;
       retryCountRef.current = 0;
+      resumeWhenReady();
     }).catch((reason: unknown) => {
+      if (!mountedRef.current) return;
       const message = reason instanceof ApiError
         ? reason.message
         : reason instanceof Error && reason.name === "AbortError"
@@ -76,7 +67,7 @@ export default function App() {
       retryCountRef.current += 1;
       retryTimerRef.current = window.setTimeout(startFill, delay);
     });
-  }, [loadNextAvailable]);
+  }, [resumeWhenReady]);
 
   useEffect(() => {
     let active = true;
@@ -90,16 +81,19 @@ export default function App() {
       setSelectedModel(model);
       setTheme(normalizeTheme(storedTheme));
       setProgress({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET && navigator.onLine });
-      await loadNextAvailable();
-      if (!active) return;
       setInitialized(true);
       startFill();
-    })();
+    })().catch(() => {
+      if (!active) return;
+      setInitialized(true);
+      setGenerationError("Could not read local study settings. Reload to try again.");
+      setProgress(DEFAULT_PROGRESS);
+    });
     return () => {
       active = false;
       window.clearTimeout(retryTimerRef.current);
     };
-  }, [loadNextAvailable, startFill]);
+  }, [startFill]);
 
   useEffect(() => {
     const handleOnline = () => { setOnline(true); retryCountRef.current = 0; startFill(); };
@@ -114,44 +108,44 @@ export default function App() {
 
   const handleSelect = useCallback(async (optionId: OptionId) => {
     if (!question || !encounter || busy || encounter.completedAt || encounter.selectedOptionIds.includes(optionId)) return;
-    setBusy(true);
+    setBusyEncounterId(encounter.id);
     try {
       const updated = await studyRepository.recordSelection(encounter.id, optionId, optionId === question.correctOptionId);
-      setEncounter(updated);
+      updateEncounter(updated);
     } finally {
-      setBusy(false);
+      setBusyEncounterId((current) => current === encounter.id ? undefined : current);
     }
-  }, [busy, encounter, question]);
+  }, [busy, encounter, question, updateEncounter]);
 
   const handleReveal = useCallback(async () => {
     if (!encounter || busy || encounter.completedAt) return;
-    setBusy(true);
-    try { setEncounter(await studyRepository.revealAnswer(encounter.id)); }
-    finally { setBusy(false); }
-  }, [busy, encounter]);
+    setBusyEncounterId(encounter.id);
+    try { updateEncounter(await studyRepository.revealAnswer(encounter.id)); }
+    finally { setBusyEncounterId((current) => current === encounter.id ? undefined : current); }
+  }, [busy, encounter, updateEncounter]);
 
   const handleNext = useCallback(async () => {
-    if (!question || !encounter?.completedAt || busy) return;
-    setBusy(true);
-    const previousId = question.id;
+    if (!encounter?.completedAt || busy) return;
+    await nextQuestion();
     try {
-      if (mode === "fresh") await studyRepository.removeFromQueue(previousId);
       const ready = await studyRepository.getFreshCount();
-      setProgress((previous) => ({ ...previous, ready }));
-      setQuestion(undefined);
-      setEncounter(undefined);
-      await loadNextAvailable(mode === "review" ? previousId : undefined);
-      startFill();
-      window.scrollTo({ top: 0, behavior: "auto" });
-    } finally {
-      setBusy(false);
+      if (mountedRef.current) setProgress((previous) => ({ ...previous, ready }));
+    } catch {
+      if (mountedRef.current) setGenerationError("Could not read the local queue.");
     }
-  }, [busy, encounter?.completedAt, loadNextAvailable, mode, question, startFill]);
+    startFill();
+  }, [busy, encounter?.completedAt, nextQuestion, startFill]);
 
   const handleFollowUpMessagesChange = useCallback(async (messages: FollowUpMessage[]) => {
     if (!encounter) return;
-    setEncounter(await studyRepository.setFollowUpMessages(encounter.id, messages));
-  }, [encounter]);
+    updateEncounter(await studyRepository.setFollowUpMessages(encounter.id, messages));
+  }, [encounter, updateEncounter]);
+
+  useEffect(() => {
+    const closeSettings = () => setSettingsOpen(false);
+    window.addEventListener("popstate", closeSettings);
+    return () => window.removeEventListener("popstate", closeSettings);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -197,6 +191,7 @@ export default function App() {
 
       {question && encounter ? (
         <QuestionView
+          key={encounter.id}
           question={question}
           encounter={encounter}
           mode={mode}
@@ -208,7 +203,13 @@ export default function App() {
         />
       ) : (
         <main className="empty-state">
-          {!initialized || progress.generating ? (
+          {navigationStatus === "unavailable" ? (
+            <><h1>Question unavailable in this browser</h1><p>This link needs a question saved in this browser at this site address.</p><button className="primary-button" type="button" onClick={continueStudying}>Continue studying</button></>
+          ) : navigationStatus === "error" ? (
+            <><h1>Could not load local study data</h1><p>Your browser’s storage could not be read. Try loading the question again.</p><button className="primary-button" type="button" onClick={retryNavigation}>Try again</button></>
+          ) : navigationStatus === "loading" ? (
+            <><div className="loader" aria-hidden="true" /><h1>Loading question</h1></>
+          ) : !initialized || progress.generating ? (
             <><div className="loader" aria-hidden="true" /><h1>Preparing your first question</h1><p>IWorld is generating a fresh clinical vignette.</p></>
           ) : (
             <><h1>A connection is needed</h1><p>{generationError || "There are no generated questions available to review yet."}</p><button className="primary-button" type="button" onClick={retry}>Try again</button></>
@@ -226,6 +227,10 @@ export default function App() {
         selectedModel={selectedModel}
         theme={theme}
         onClose={() => setSettingsOpen(false)}
+        onOpenQuestion={(questionId, encounterId) => {
+          setSettingsOpen(false);
+          openQuestion(questionId, encounterId);
+        }}
         onSelectModel={handleModelChange}
         onSelectTheme={handleThemeChange}
       />

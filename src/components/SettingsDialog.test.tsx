@@ -17,6 +17,7 @@ const props = {
   selectedModel: "gemini-3.5-flash-lite",
   theme: "light" as const,
   onClose: vi.fn(),
+  onOpenQuestion: vi.fn(),
   onSelectModel: vi.fn(async () => undefined),
   onSelectTheme: vi.fn(async () => undefined)
 };
@@ -39,7 +40,7 @@ describe("SettingsDialog", () => {
     vi.mocked(studyRepository.getRecentQuestionTopics).mockResolvedValue([{ ...makeQuestion({
       topicTitle: "Consent", blueprint: { discipline: "phelo", physicianActivity: "professional_behaviours",
         careDimension: "psychosocial", cognitiveTask: "capacity_consent", mccObjectiveIds: ["14"] }
-    }), outcome: "correct" }]);
+    }), encounterId: "saved-encounter", outcome: "correct" }]);
     render(<SettingsDialog {...props} />);
     expect(await screen.findByLabelText("Correct")).toHaveClass("is-correct");
     expect(await screen.findByText("Consent")).toBeInTheDocument();
@@ -49,9 +50,36 @@ describe("SettingsDialog", () => {
     expect(screen.queryByText(/ongoing central chest pressure/)).not.toBeInTheDocument();
   });
 
+  it("links to saved questions and intercepts only ordinary activation", async () => {
+    const question = { ...makeQuestion(), encounterId: "saved-completion", outcome: "correct" as const };
+    vi.mocked(studyRepository.getRecentQuestionTopics).mockResolvedValue([question]);
+    const onOpenQuestion = vi.fn();
+    render(<SettingsDialog {...props} onOpenQuestion={onOpenQuestion} />);
+    const link = await screen.findByRole("link", { name: question.topicTitle });
+    expect(link).toHaveAttribute("href", `/questions/${question.id}`);
+    link.focus();
+    expect(link).toHaveFocus();
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    fireEvent(link, click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(onOpenQuestion).toHaveBeenCalledExactlyOnceWith(question.id, question.encounterId);
+    // Native links synthesize the same click for keyboard activation. Modifier
+    // clicks and middle clicks must retain native new-tab/window behavior.
+    for (const init of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+      const modified = new MouseEvent("click", { bubbles: true, cancelable: true, ...init });
+      // Observe cancellation before stopping jsdom from attempting navigation.
+      link.addEventListener("click", (event) => {
+        expect(event.defaultPrevented).toBe(false);
+        event.preventDefault();
+      }, { once: true });
+      fireEvent(link, modified);
+    }
+    expect(onOpenQuestion).toHaveBeenCalledOnce();
+  });
+
   it("labels incorrect and unavailable outcomes without relying on color", async () => {
     vi.mocked(studyRepository.getRecentQuestionTopics).mockResolvedValue([
-      { ...makeQuestion(), outcome: "incorrect" }, { ...makeQuestion(), outcome: "unknown" }
+      { ...makeQuestion(), encounterId: "saved-encounter", outcome: "incorrect" }, { ...makeQuestion(), encounterId: "saved-encounter", outcome: "unknown" }
     ]);
     render(<SettingsDialog {...props} />);
     expect(await screen.findByLabelText("Incorrect")).toHaveClass("is-incorrect");
@@ -66,7 +94,7 @@ describe("SettingsDialog", () => {
     rerender(<SettingsDialog {...props} open={false} />);
     rerender(<SettingsDialog {...props} />);
     expect(await screen.findByText("No completed questions yet.")).toBeInTheDocument();
-    await act(async () => resolveOld([{ ...makeQuestion({ topicTitle: "Stale title" }), outcome: "incorrect" }]));
+    await act(async () => resolveOld([{ ...makeQuestion({ topicTitle: "Stale title" }), encounterId: "saved-encounter", outcome: "incorrect" }]));
     expect(screen.queryByText("Stale title")).not.toBeInTheDocument();
     rerender(<SettingsDialog {...props} open={false} />);
     vi.mocked(studyRepository.getRecentQuestionTopics).mockRejectedValueOnce(new Error("Unavailable"));

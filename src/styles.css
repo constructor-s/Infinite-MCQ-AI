@@ -213,7 +213,9 @@ legend { margin-bottom: 9px; font-weight: 700; }
 .recent-question-list dd { margin: 0; }
 
 .recent-question-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
-.recent-question-heading > strong { flex: 1 1 180px; }
+.recent-question-heading > a { flex: 1 1 180px; color: var(--text); font-weight: 700; text-underline-offset: 3px; }
+.recent-question-heading > a:hover { text-decoration-thickness: 2px; }
+.recent-question-heading > a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 2px; }
 .question-outcome { flex: 0 0 auto; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--hover); }
 .question-outcome.is-correct { color: var(--correct-text); background: var(--correct-bg); }
 .question-outcome.is-incorrect { color: var(--wrong-text); background: var(--wrong-bg); }

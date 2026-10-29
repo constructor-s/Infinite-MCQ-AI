@@ -7,9 +7,10 @@ type Props = {
   onMessagesChange: (messages: FollowUpMessage[]) => Promise<void>;
 };
 
-export function QuestionFollowUp({ question, messages: initialMessages, onMessagesChange }: Props) {
+export function QuestionFollowUp({ question, messages: savedMessages, onMessagesChange }: Props) {
   const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<FollowUpMessage[]>(initialMessages);
+  const [pendingMessages, setPendingMessages] = useState<FollowUpMessage[]>();
+  const messages = pendingMessages ?? savedMessages;
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,7 +19,7 @@ export function QuestionFollowUp({ question, messages: initialMessages, onMessag
     const text = draft.trim();
     if (!text || sending) return;
     const nextMessages: FollowUpMessage[] = [...messages, { role: "user", text }];
-    setMessages(nextMessages);
+    setPendingMessages(nextMessages);
     setDraft("");
     setSending(true);
     setError("");
@@ -32,7 +33,7 @@ export function QuestionFollowUp({ question, messages: initialMessages, onMessag
       if (!response.ok || !body.answer) throw new Error(body.error?.message || "Follow-up is unavailable");
       const completedMessages: FollowUpMessage[] = [...nextMessages, { role: "assistant", text: body.answer }];
       await onMessagesChange(completedMessages);
-      setMessages(completedMessages);
+      setPendingMessages(undefined);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Follow-up is unavailable");
     } finally {

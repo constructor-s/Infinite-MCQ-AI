@@ -64,6 +64,14 @@ npm run build
 
 Questions, attempts, the queue, and the selected model remain in that browser's IndexedDB. Clearing site data removes them.
 
+## Question links and history
+
+Each displayed question has a stable `/questions/<uuid>` address. Back and Forward restore the attempt shown on that history entry, including saved answers and follow-up conversations. Refresh uses that same attempt when its history state is available; bookmarks, copied links, and new tabs open the question's latest saved attempt. Opening an existing attempt does not count as another attempt.
+
+In Settings, titles under **Recent question topics** link to the completed attempt represented by each row. The list still contains the last 20 unique completed questions. **Next question** always resumes normal study from the queue or automatic review, including after opening an older question; it does not walk forward through visited questions.
+
+Links work only with data retained in the same browser profile and site origin (protocol, hostname, and port). Another browser, device, or site address will show the question as unavailable. Existing locally stored questions can be reopened offline after the PWA is cached; generation and new follow-up replies require a connection. No cloud synchronization is used.
+
 ## Current boundaries
 
 The objective source snapshot is complete for its import date; eligibility mappings are application-authored and require clinical review. AI-generated educational content may be wrong and must not replace clinical guidance. Authentication-backed sync, cloud storage, analytics UI, and data export/import remain deferred.

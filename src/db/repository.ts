@@ -1,16 +1,34 @@
 import { db, type GenerationEvent, type IWorldDatabase } from "./database";
-import type { ClinicalQuestion, Encounter, EncounterMode, FollowUpMessage, OptionId } from "../lib/contracts";
+import { clinicalQuestionSchema, type ClinicalQuestion, type Encounter, type EncounterMode, type FollowUpMessage, type OptionId } from "../lib/contracts";
 import { createLocalId } from "../lib/createLocalId";
 import { blueprint, blueprintTagsSchema } from "../lib/blueprint";
 import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
 
-export type RecentQuestionTopic = ClinicalQuestion & { outcome: "correct" | "incorrect" | "unknown" };
+export type RecentQuestionTopic = ClinicalQuestion & { encounterId: string; outcome: "correct" | "incorrect" | "unknown" };
 
 export type CorrectRate = { correct: number; total: number };
 export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate; lastHour: CorrectRate; last24Hours: CorrectRate };
 
 export class LocalStudyRepository {
   constructor(private database: IWorldDatabase = db) {}
+
+  async getQuestionById(questionId: string): Promise<ClinicalQuestion | undefined> {
+    const question = await this.database.questions.get(questionId);
+    return clinicalQuestionSchema.safeParse(question).success ? question : undefined;
+  }
+
+  async getSavedEncounter(questionId: string, encounterId?: string): Promise<Encounter | undefined> {
+    if (encounterId) {
+      const encounter = await this.database.encounters.get(encounterId);
+      if (encounter?.questionId === questionId) return encounter;
+    }
+    const encounters = await this.database.encounters.where("questionId").equals(questionId).toArray();
+    return encounters.sort((a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id))[0];
+  }
+
+  async isQueued(questionId: string): Promise<boolean> {
+    return Boolean(await this.database.queueItems.where("questionId").equals(questionId).first());
+  }
 
   async getCorrectRates(): Promise<CorrectRates> {
     const now = Date.now();
@@ -116,7 +134,7 @@ export class LocalStudyRepository {
         const encounter = latest.get(question.id)!;
         const outcome = encounter.revealedAnswer || encounter.firstAttemptCorrect === false ? "incorrect"
           : encounter.firstAttemptCorrect === true ? "correct" : "unknown";
-        return { ...question, outcome };
+        return { ...question, encounterId: encounter.id, outcome };
       });
     });
   }
@@ -135,31 +153,34 @@ export class LocalStudyRepository {
   }
 
   async beginEncounter(question: ClinicalQuestion, mode: EncounterMode): Promise<Encounter> {
-    const encounters = await this.database.encounters
-      .where("[questionId+mode]")
-      .equals([question.id, mode])
-      .toArray();
-    const queued = mode === "fresh" && Boolean(
-      await this.database.queueItems.where("questionId").equals(question.id).first()
-    );
-    const candidates = queued ? encounters : encounters.filter((encounter) => !encounter.completedAt);
-    const existing = candidates.sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-    if (existing) return existing;
-    const now = new Date().toISOString();
-    const encounter: Encounter = {
-      id: createLocalId(),
-      questionId: question.id,
-      topicId: question.topicId,
-      blueprint: structuredClone(question.blueprint),
-      mode,
-      startedAt: now,
-      updatedAt: now,
-      selectedOptionIds: [],
-      revealedAnswer: false,
-      eventuallyCorrect: false
-    };
-    await this.database.encounters.add(encounter);
-    return encounter;
+    // Serialize read/create across startup, navigation, and other tabs.
+    return this.database.transaction("rw", this.database.encounters, this.database.queueItems, async () => {
+      const encounters = await this.database.encounters
+        .where("[questionId+mode]")
+        .equals([question.id, mode])
+        .toArray();
+      const queued = mode === "fresh" && Boolean(
+        await this.database.queueItems.where("questionId").equals(question.id).first()
+      );
+      const candidates = queued ? encounters : encounters.filter((encounter) => !encounter.completedAt);
+      const existing = candidates.sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+      if (existing) return existing;
+      const now = new Date().toISOString();
+      const encounter: Encounter = {
+        id: createLocalId(),
+        questionId: question.id,
+        topicId: question.topicId,
+        blueprint: structuredClone(question.blueprint),
+        mode,
+        startedAt: now,
+        updatedAt: now,
+        selectedOptionIds: [],
+        revealedAnswer: false,
+        eventuallyCorrect: false
+      };
+      await this.database.encounters.add(encounter);
+      return encounter;
+    });
   }
 
   async setFollowUpMessages(encounterId: string, messages: FollowUpMessage[]): Promise<Encounter> {
