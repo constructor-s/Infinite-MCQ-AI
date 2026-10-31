@@ -1,16 +1,16 @@
 # IWorld
 
-IWorld is a local-first MCCQE clinical reasoning PWA. It generates one question at a time with Gemini, keeps ten fresh questions in IndexedDB, and falls back to missed-first review when generation is unavailable.
+IWorld is a local-first MCCQE clinical reasoning PWA. It generates one question at a time with Gemini, keeps three fresh questions in IndexedDB, and falls back to missed-first review when generation is unavailable.
 
 ## Local setup
 
 1. Install Node.js 22 or newer and run `npm install`.
-2. Copy `.env.example` to `.env.local` and set a Google AI Studio free-tier `GEMINI_API_KEY`.
+2. Copy `.env.example` to `.env.local` and set a Google AI Studio `GEMINI_API_KEY` with access to the selected model and search grounding.
 3. Run `npm run dev`. Vite binds to all network interfaces; open the printed **Network** URL on a phone connected to the same LAN.
 
 If the phone shows a cached page but generation cannot connect, confirm the terminal still shows the dev server running, reload the Network URL, and ensure the operating-system firewall permits incoming Node.js connections.
 
-No study questions are shipped in the queue. A first launch requires a working Gemini key and network connection. Generation uses the checked-in MCC objective snapshot and blueprint configuration described below; editing these requires a rebuild. The prompt includes one original style exemplar, not an official MCC practice item.
+No study questions are shipped in the queue. A first launch requires a working Gemini key and network connection. Generation uses the checked-in MCC objective snapshot and blueprint configuration described below; editing these requires a rebuild. Generation is zero-shot: the source objective sets the content, and the JSON schema plus short style instructions set the format. Clinical exemplars are not included in generation prompts.
 
 ## Blueprint and question generation
 
@@ -20,7 +20,15 @@ Before calling Gemini, the browser chooses an eligible discipline/activity/care 
 
 Within the chosen combination, 70% of objective draws use baseline priorities and 30% use bounded weakness, spacing and coverage multipliers. Weakness uses the latest 20 first-attempt outcomes per objective, with Beta(1,1) smoothing; revealing an unanswered question counts as a miss. Spacing reaches its maximum at 30 days; unseen objectives receive neutral weakness and high coverage priority. The least recently used eligible cognitive task is selected next. Personalization stays within the selected blueprint combination.
 
-The server validates the assignment against `curriculum/crosswalk.json`, then assembles a shared prompt with the source objective, a specific enabling clause, task/care instructions, recent scenarios to avoid, and one rotating task-matched original example. New vignettes are single paragraphs. Every question and encounter records blueprint tags; questions and generation events also record blueprint, curriculum, crosswalk and prompt versions. Questions retain the selected enabling-clause identifier. No second model call is used for validation: schema, paragraph, answer-leak, duplicate and obvious task-mismatch rules run locally on the server. One correction retry retains the same assignment. These rules cannot prove clinical correctness or semantic alignment.
+The server validates the assignment against `curriculum/crosswalk.json` and generates a paragraph question from the objective, enabling clause, task/care instructions and recent scenarios. Local schema, paragraph, answer-leak, duplicate and task-alignment checks run first. Two separate calls then review each valid candidate: a clinical reviewer independently solves shuffled options without seeing the key or teaching content, while an editorial reviewer checks the complete item using six annotated construction examples. The key must agree with the clinical reviewer; every blocking criterion must pass. Minor polish is advisory.
+
+Blocking findings produce a revision containing the actual draft and review findings. There are at most three candidate calls and two reviews per valid candidate (nine model calls maximum). Each revision gets fresh reviewers. Only accepted questions are shuffled for display and returned. The selected model is used throughout with high thinking effort and model-default sampling. The installed SDK supports these controls; no extra service credentials are required.
+
+Only the clinical reviewer has Google Search grounding. It must verify current recommendations, answer-determining doses/thresholds/intervals, jurisdiction-specific duties and disputed conclusions, using relevant authoritative sources. Routine case demographics or simple arithmetic alone do not trigger verification. Retrieved references must resolve to actual provider grounding metadata, with searches present for verification-required claims. This provenance check does not establish the medical truth or authority of a cited source; source relevance and content remain model judgments requiring independent evaluation.
+
+The generation function has a 285-second application deadline, a 300-second Vercel limit (requires a deployment supporting that duration, such as Fluid Compute), and a 305-second browser timeout. Cancellation, invalid reviews, quota exhaustion and unresolved quality failures cannot return unreviewed questions. Background queue retries retain their existing backoff. Routine stage logs include request ID, stage, round, model, durations, call count and rejected criterion names, without question text. An opt-in internal trace hook supports local evaluation.
+
+Every question and encounter records blueprint tags; questions and generation events also record blueprint, curriculum, crosswalk and prompt versions. Questions retain the selected enabling-clause identifier. Historical questions are preserved, including those generated before model review was introduced.
 
 Only schema-version-2 paragraph questions are supported. Pre-existing browser records are left untouched but older question formats are excluded from the active queue and review. Settings and new study history continue using the same IndexedDB database. `curriculum/topics.json` is the original starter reference and no longer controls generation.
 
@@ -37,13 +45,21 @@ python3 scripts/build-mcc-crosswalk.py
 
 The crosswalk is application-authored, starting from the study guide's discipline lists and extending omitted objectives. Explicit tuples bind an objective, discipline, activity, care dimension, task and enabling clause. The authoring script uses selective care profiles, source-clause matching, and explicit role overrides; inspect its output after any refresh. It is not an official MCC mapping or a substitute for clinical review. Its review status is recorded in the JSON. A content-hash version detects inconsistent snapshots, catalogues and crosswalks in tests.
 
-`curriculum/exemplars.json` contains two original micro-exemplars per cognitive task, calibrated to the official practice set's prose and answer styles. The official 55-item set is a style reference, not an estimate of blueprint frequencies. `curriculum/practice-calibration.json` records structural observations for all 55 supplied questions. `curriculum/evaluation.json` reserves separate requests and a manual review rubric for offline evaluation; it is never injected into generation prompts. Recorded results and unresolved content-quality findings are in [the evaluation review](docs/generation-evaluation.md). Run the local evaluation against an already running development server:
+`curriculum/exemplars.json` retains two historical micro-exemplars per cognitive task as offline references. They are not supplied to the generator or used as reviewer calibration labels. The editorial reviewer uses a separate set in `src/server/questionReview.ts`. The official 55-item set is a style reference, not an estimate of blueprint frequencies. `curriculum/practice-calibration.json` records structural observations for all 55 supplied questions. `curriculum/evaluation.json` reserves separate requests and a manual review rubric for offline evaluation; it is never injected into generation prompts. Recorded results and unresolved content-quality findings are in [the evaluation review](docs/generation-evaluation.md). Run the local evaluation against an already running development server:
 
 ```sh
 node scripts/evaluate-generation.mjs https://localhost:5173 /tmp/iworld-generation-evaluation.json
 ```
 
-This command makes billable/quota-consuming Gemini calls. Review each saved item for blueprint/task alignment, factual accuracy, one best answer, original scenario, homogeneous distractors and concise prose. Deterministic sampling tests independently simulate 10,000 selections and check every 200-item window, including concentrated weaknesses and uneven objective counts.
+For draft/review traces without an HTTP server, run:
+
+```sh
+node scripts/evaluate-generation.mjs direct /tmp/iworld-generation-evaluation.json
+```
+
+Append a comma-separated list of case IDs to select a subset. Append `--options-only` for an extra wording-clue diagnostic on accepted items. That diagnostic sees the stem and options without the vignette or answer key; its guesses do not change acceptance. Reports include prompt/evaluation versions, failed cases, revision counts, criterion failures and descriptive answer-length signals. Successful results are reused only for matching versions and assignments. Quality failures do not abort the finite case list; missing credentials or exhausted quota stop it.
+
+These commands make billable/quota-consuming Gemini calls, including search operations. Direct-mode reports contain complete draft/review content and should remain local. Review each saved item for blueprint/task alignment, factual accuracy, one best answer, original scenario, homogeneous distractors and concise prose. Deterministic sampling tests independently simulate 10,000 selections and check every 200-item window, including concentrated weaknesses and uneven objective counts.
 
 Sources: [MCCQE](https://mcc.ca/examinations-assessments/mccqe/), [MCC Examination Objectives](https://mcc.ca/objectives/), [Study smarter (2026)](https://mcc.ca/wp-content/uploads/Study-smarter-A-study-guide-for-the-MCCQE.pdf), and [55 practice questions (2026)](https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf).
 
@@ -68,9 +84,17 @@ Questions, attempts, the queue, and the selected model remain in that browser's 
 
 In Settings, **Question focus** lets you switch from mixed practice to one of the six disciplines and optionally choose a searchable MCC objective. Click **Apply focus** to save it. The current question and answers stay open; the next question uses the selected focus. Focus persists in this browser until you select **Return to mixed practice**.
 
-Each focus has its own fresh-question queue, filled to ten while active. Switching preserves inactive queues for later. Focused practice waits for fresh questions instead of automatically reviewing old ones; if none are ready, you can wait, retry generation, or return to mixed practice. Saved question links and Back/Forward continue to restore their original attempts regardless of focus.
+Each focus has its own fresh-question queue, filled to three while active. Existing larger queues drain naturally before refilling. Switching preserves inactive queues for later. Focused practice waits for fresh questions instead of automatically reviewing old ones; if none are ready, you can wait, retry generation, or return to mixed practice. Saved question links and Back/Forward continue to restore their original attempts regardless of focus.
 
 Blueprint coverage is tracked separately for mixed practice and each focus, so drills do not cause compensating changes to the mixed distribution. Focused selections retain eligible activity, care and cognitive-task combinations; a restricted pool may not support the full blueprint distribution. Objective performance history remains shared, and first attempts on fresh focused questions contribute to correct rates. Invalid or obsolete saved focus selections reset to mixed practice with a notice. No free-text steering or additional subspecialty taxonomy is used.
+
+## Optional question feedback
+
+After an answer is revealed or correctly selected, two subtle thumb icons let you mark a question as good or needing improvement. Feedback is optional; click the selected icon again to clear it, or the other icon to switch. It never blocks Next or generation. Votes persist per question across attempts and work offline.
+
+IndexedDB version 2 adds a separate feedback table while preserving questions, attempts, settings and queues. Ratings stay in this browser; nothing is uploaded or used to automatically alter prompts, answer keys, study sampling or saved questions. Storage failures leave studying usable and display a small local error.
+
+For local developer review, `LocalStudyRepository.getQuestionFeedbackReviewData()` returns ratings joined to questions (including model/prompt provenance) and the associated encounters. It can be called from a local module/debug session importing the repository. Inspect negative ratings as leads, since they do not by themselves establish a defect. Compare them with actual review failures before adding checks; there is no dashboard or cloud feedback collection.
 
 ## Question links and history
 
@@ -84,4 +108,4 @@ Links work only with data retained in the same browser profile and site origin (
 
 The objective source snapshot is complete for its import date; eligibility mappings are application-authored and require clinical review. AI-generated educational content may be wrong and must not replace clinical guidance. Authentication-backed sync, cloud storage, analytics UI, and data export/import remain deferred.
 
-Generation targets graduating medical students entering supervised practice in Canada. Five choices include one best answer and four distractors, with at least one strong alternative distinguished by supplied case facts or priorities. Numeric difficulty ratings are not used. Prompt and schema checks cannot establish clinical correctness or actual difficulty, which require content review and eventually learner-performance data.
+Generation targets graduating medical students entering supervised practice in Canada. Five choices include one best answer and four distractors, with at least one strong alternative distinguished by supplied case facts or priorities. Numeric difficulty ratings are not used. Deterministic checks and model reviews cannot establish clinical correctness or actual difficulty. Independent clinical calibration and learner-performance data remain outstanding; the held-out smoke test is not clinical certification.

@@ -1,6 +1,6 @@
 {
-  "version": "offline-evaluation-v2",
-  "purpose": "Held-out assignment requests and manual rubric. Not imported by prompts or the client.",
+  "version": "offline-evaluation-v3",
+  "purpose": "Held-out assignments and manual rubric for the reviewed generation workflow. Never imported into prompts. Model reviews are not clinical certification.",
   "calibrationSource": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
   "rubric": [
     "The item tests application of findings at graduating-medical-student MCCQE level, without specialist trivia or missing information creating difficulty.",
@@ -12,7 +12,12 @@
     "Clinical facts, units, management and Canadian legal context are accurate.",
     "There is exactly one best answer and five plausible, homogeneous choices.",
     "The vignette is focused prose without a copied exemplar scenario or unavailable image.",
-    "Hints do not disclose the answer; explanations and pearl are accurate."
+    "Hints do not disclose the answer; explanations and pearl are accurate.",
+    "The key is not identifiable through uniquely comprehensive detail, grammatical clues, implausible alternatives or conspicuous length differences.",
+    "One close distractor is attractive for a recognizable misconception and inferior because of explicit supplied facts.",
+    "The actual decision represents the assigned objective rather than merely mentioning its topic.",
+    "Source-sensitive claims have relevant retrieved evidence; no invented or unresolved references.",
+    "Advisory wording suggestions alone do not require revision. Inspect whether revisions introduce new defects."
   ],
   "cases": [
     {

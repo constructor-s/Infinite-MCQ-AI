@@ -62,3 +62,32 @@ The live sample does not pass the full content rubric. Strong-distractor quality
 ## Prompt v4 simplification
 
 Numeric difficulty was removed from generation requests, prompts and question schemas. The graduating-student MCCQE target and answer-quality instructions remain. Legacy saved questions retain any stored difficulty property, which is ignored and stripped when parsed; the database and question schema versions are unchanged. Historical v3 results above describe the prompt used at that time. No new live evaluation was run for this metadata removal.
+
+## Reviewed generation v5 — October 30, 2026
+
+Generation now uses the objective and schema without a clinical exemplar. Each structurally valid candidate receives separate clinical and editorial reviews. The clinical reviewer solves a shuffled item without its key, hints or explanations. Its answer is mapped back to the candidate IDs. The editorial reviewer receives the full draft and six original annotated construction examples. Blocking defects trigger revision; advisory polish does not. Three candidate calls cap a request at nine top-level model calls. No failed review permits an item to enter the queue.
+
+Search grounding is available only to the clinical reviewer, with required verification for current recommendations, answer-determining doses/thresholds/intervals, jurisdictional duties and uncertain/disputed clinical conclusions. Referenced chunk indexes must resolve to actual retrieved metadata; verification-required claims also require search activity. These checks establish provenance, not medical truth or source authority. Reviewer agreement and successful schemas do not constitute independent clinical validation.
+
+The ready-queue target is now three in mixed and focused practice. Existing larger queues drain naturally. Optional thumbs are shown after resolution, persisted per question in a separate IndexedDB version-2 table, and can be switched or cleared. They never alter study sampling, prompts or answers automatically. Local repository review queries join ratings to model/prompt provenance and encounter context; no feedback is uploaded.
+
+### Live integration attempt
+
+The finite evaluation runner was invoked in direct mode for the held-out medicine/laboratory-interpretation assignment, using the configured Gemini 3.5 Flash-Lite key. Candidate generation succeeded and the two review requests started. Gemini returned `429 QUOTA_EXHAUSTED` during review. The request returned an error, no question was accepted, and the runner stopped on quota instead of attempting the remaining eleven assignments.
+
+The local artifact is `/tmp/iworld-reviewed-evaluation.json`; it contains one unaccepted draft and no completed reviewer verdicts. The draft has not received independent clinical review. No conclusions about distractor improvement, reviewer calibration or clinical correctness can be drawn from this interrupted sample. The nine-call bound, review acceptance, reference provenance, cancellation and feedback behavior are verified with mocked-provider and component/repository tests. A fresh full live run remains necessary when quota is available.
+
+### Reproduction and future checks
+
+```sh
+node scripts/evaluate-generation.mjs direct /tmp/iworld-reviewed-evaluation.json
+node scripts/evaluate-generation.mjs direct /tmp/iworld-reviewed-options-evaluation.json medicine-laboratory_interpretation --options-only
+```
+
+The original local HTTP runner remains supported. Direct mode adds private draft/review traces; clinical traces include the blinded presentation and mapped answer for interpretation. Reports reject stale prompt/evaluation versions, retain failed cases, count revised items and failing criteria, and describe answer-length patterns. Quality rejection continues the finite case list; missing credentials/quota stops it. The optional stem-and-options-only diagnostic is not an acceptance gate, and a correct guess is not proof of a wording flaw.
+
+For future quality changes, inspect actual rejected criteria and `LocalStudyRepository.getQuestionFeedbackReviewData()` first. Reproduce a suspected defect, add an appropriate regression case, and check accepted questions for false rejections. Preserve passing counterexamples such as a legitimate longest correct answer. There is no automatic prompt learning. Broader clinician calibration, example-versus-no-example comparisons and learner-based discrimination/distractor analysis remain outstanding.
+
+### Verification
+
+The full automated suite, TypeScript checks and production build pass. The build retains dependency annotation and bundle-size warnings. Chrome access was not approved, so visual inspection in light/dark and narrow layouts was unavailable. Component tests cover optional controls, accessible labels/state, restored ratings, late navigation reads, failed writes and keyboard interaction; an additive migration test preserves existing questions, settings and queued records. No production deployment was performed.

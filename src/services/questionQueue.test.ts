@@ -144,6 +144,14 @@ describe("QuestionQueueService", () => {
     expect(repository.questions).toHaveLength(QUEUE_TARGET);
   });
 
+  it("lets an existing larger queue drain without deleting questions or generating more", async () => {
+    const repository = makeRepository(Array.from({ length: 10 }, () => makeQuestion()));
+    vi.stubGlobal("fetch", vi.fn());
+    await new QuestionQueueService(repository as unknown as LocalStudyRepository).fill();
+    expect(repository.questions).toHaveLength(10);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("rejects a successful HTTP response carrying the wrong assignment", async () => {
     const repository = makeRepository();
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(makeQuestion({ topicId: "wrong-topic" })), { status: 200 })));

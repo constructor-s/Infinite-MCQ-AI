@@ -167,11 +167,12 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
         if (error instanceof GenerationError || signal.aborted || /429|resource_exhausted|quota/i.test(error instanceof Error ? error.message : "")) throw error;
         throw new GenerationError("EVALUATION_FAILED", "Unable to evaluate the generated question", 502);
       }
-      trace("clinical", round, { review: clinical, grounding });
-      trace("editorial", round, editorial);
+      const blindAnswerId = clinical.answerId;
       // Map the blind reviewer IDs to the original draft without leaking the key.
       const originalId = (id: OptionId | null) => id === null ? null : parsed.options.find((option) => option.text === blinded.options.find((option) => option.id === id)?.text)!.id;
       clinical = { ...clinical, answerId: originalId(clinical.answerId), strongestDistractorId: originalId(clinical.strongestDistractorId) };
+      trace("clinical", round, { review: clinical, blindQuestion: blindDraft, blindAnswerId, grounding });
+      trace("editorial", round, editorial);
       const issues = reviewIssues(parsed, clinical, editorial, grounding);
       if (forceVerification && clinical.verificationCategory === "none") issues.push("clinical.disputedVerificationRequired");
       trace("decision", round, { accepted: !issues.length, issues, calls });
