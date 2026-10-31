@@ -12,7 +12,7 @@ import exemplars from "../../curriculum/exemplars.json";
 
 const { generateContent } = vi.hoisted(() => ({ generateContent: vi.fn() }));
 vi.mock("@google/genai", async () => ({ ...await vi.importActual("@google/genai"), GoogleGenAI: class { models = { generateContent }; } }));
-afterEach(() => { generateContent.mockReset(); vi.restoreAllMocks(); vi.useRealTimers(); });
+afterEach(() => { generateContent.mockReset(); vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllEnvs(); });
 
 function request(): GenerateQuestionRequest {
   const entry = eligibility.find((e) => e.objectiveId === "14" && e.physicianActivity === "management" && e.careDimension === "acute")!;
@@ -368,6 +368,69 @@ describe("question generation safeguards", () => {
     await vi.advanceTimersByTimeAsync(GENERATION_DEADLINE_MS);
     await pending;
     expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps model output out of normal server logs", async () => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "info");
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const input = request();
+    reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }]);
+    await generateQuestion(input, "test-key");
+    expect(debug).not.toHaveBeenCalled();
+  });
+
+  it("logs filterable verbose results with stable call numbers and redacted metadata", async () => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "verbose");
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([candidate], { grounding: { webSearchQueries: ["reference test-key"] } });
+    await generateQuestion(input, "test-key");
+    expect(debug).toHaveBeenCalledTimes(3);
+    const rows = debug.mock.calls.map(([line]) => {
+      expect(line).toMatch(/^\[question-generation:verbose\] /);
+      expect(line).not.toContain("test-key");
+      return JSON.parse(String(line).slice("[question-generation:verbose] ".length));
+    });
+    expect(rows.map(({ stage, call, round, status }) => ({ stage, call, round, status }))).toEqual([
+      { stage: "candidate", call: 1, round: 1, status: "success" },
+      { stage: "clinical", call: 2, round: 1, status: "success" },
+      { stage: "editorial", call: 3, round: 1, status: "success" }
+    ]);
+    expect(rows[0].result.vignette).toBe(candidate.vignette);
+    expect(rows[1].grounding.webSearchQueries).toEqual(["reference [REDACTED]"]);
+    expect(new Set(rows.map((row) => row.requestId)).size).toBe(1);
+    expect(rows.every((row) => row.level === "verbose" && row.event === "call_result" && row.durationMs >= 0)).toBe(true);
+  });
+
+  it("supports debug level and logs malformed JSON and failed reviewers without changing fallback", async () => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "debug");
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const input = request();
+    reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }], { editorial: "unavailable" });
+    const provider = generateContent.getMockImplementation()!;
+    generateContent.mockImplementation((arg) => {
+      const prompt = JSON.parse(arg.contents);
+      return prompt.question && !prompt.annotatedExamples ? Promise.resolve({ text: "{broken JSON" }) : provider(arg);
+    });
+    await generateQuestion(input, "test-key");
+    const rows = debug.mock.calls.map(([line]) => JSON.parse(String(line).slice("[question-generation:verbose] ".length)));
+    expect(rows).toHaveLength(3);
+    expect(rows.find((row) => row.stage === "clinical").result).toBe("{broken JSON");
+    expect(rows.find((row) => row.stage === "editorial")).toMatchObject({ status: "error", call: 3, error: { code: "PROVIDER_UNAVAILABLE" } });
+  });
+
+  it("logs failed calls with safe codes and HTTP status rather than raw provider exceptions", async () => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "verbose");
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    generateContent.mockRejectedValue(Object.assign(new Error("429 quota exhausted: ?key=secret-credential"), { status: 429 }));
+    await expect(generateQuestion(request(), "secret-credential")).rejects.toMatchObject({ code: "QUOTA_EXHAUSTED" });
+    expect(debug).toHaveBeenCalledTimes(1);
+    const line = String(debug.mock.calls[0][0]);
+    expect(line).not.toContain("secret-credential");
+    expect(JSON.parse(line.slice("[question-generation:verbose] ".length))).toMatchObject({
+      stage: "candidate", call: 1, status: "error", error: { code: "QUOTA_EXHAUSTED", httpStatus: 429 }
+    });
   });
 
   it("shuffles choices in code, relabels them, and remaps the correct answer", () => {

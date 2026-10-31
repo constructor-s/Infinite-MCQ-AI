@@ -80,6 +80,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   const timer = setTimeout(() => deadline.abort(), GENERATION_DEADLINE_MS);
   timer.unref?.();
   const startedAt = Date.now();
+  const verboseLogging = ["verbose", "debug"].includes((process.env.QUESTION_GENERATION_LOG_LEVEL ?? "info").toLowerCase());
   let calls = 0;
   let feedback: unknown;
   let previousDraft: unknown;
@@ -88,15 +89,26 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     try { options.onTrace?.({ requestId, stage, round, data }); }
     catch { console.warn(`[question-generation] requestId=${requestId} trace failed`); }
   };
+  const verbose = (data: Record<string, unknown>) => {
+    if (!verboseLogging) return;
+    try {
+      // Explicit response fields only; never dump SDK objects, prompts, headers
+      // or raw exceptions. Redact the configured credential defensively too.
+      const line = JSON.stringify({ level: "verbose", event: "call_result", requestId, model: input.model, ...data });
+      console.debug(`[question-generation:verbose] ${line.replaceAll(apiKey, "[REDACTED]")}`);
+    } catch {
+      console.warn(`[question-generation] requestId=${requestId} verbose logging failed`);
+    }
+  };
   async function call(stage: "candidate" | "clinical" | "editorial", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
     callSignal.throwIfAborted();
-    calls += 1;
+    const callNumber = ++calls;
     const callStarted = Date.now();
-    console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${calls} model=${input.model} started`);
+    console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} model=${input.model} started`);
     // Race the provider so the deadline also holds if a transport ignores cancellation.
     let abortListener: () => void = () => {};
     try {
-      return await Promise.race([
+      const response = await Promise.race([
         ai.models.generateContent({
           model: input.model, contents,
           config: {
@@ -115,9 +127,23 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
           if (callSignal.aborted) abortListener();
         })
       ]);
+      if (verboseLogging) {
+        const raw = response.text ?? null;
+        let result: unknown = raw;
+        try { if (raw !== null) result = JSON.parse(raw); } catch { /* Preserve malformed JSON for diagnosis. */ }
+        verbose({ stage, round, call: callNumber, status: "success", durationMs: Date.now() - callStarted,
+          result, usage: response.usageMetadata, finishReason: response.candidates?.[0]?.finishReason,
+          grounding: response.candidates?.[0]?.groundingMetadata });
+      }
+      return response;
+    } catch (error) {
+      const status = typeof error === "object" && error !== null ? (error as { status?: unknown }).status : undefined;
+      verbose({ stage, round, call: callNumber, status: "error", durationMs: Date.now() - callStarted,
+        error: { code: failureCode(error), ...(typeof status === "number" ? { httpStatus: status } : {}) } });
+      throw error;
     } finally {
       callSignal.removeEventListener("abort", abortListener);
-      console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} durationMs=${Date.now() - callStarted}`);
+      console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} durationMs=${Date.now() - callStarted}`);
     }
   }
   const failureCode = (error: unknown): string => {

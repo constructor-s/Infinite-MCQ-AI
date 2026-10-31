@@ -30,7 +30,15 @@ Reviewer results are independent and best-effort: one failed or malformed review
 
 The generation function retains a 285-second application deadline, a 300-second Vercel limit (requires a deployment supporting that duration, such as Fluid Compute), and a 305-second browser timeout. Best-effort reviewers have a shared 90-second time limit; the overall request deadline and cancellation still stop the request. Background queue retries and the three-question target are unchanged. Settings keeps the latest real generation failure visible through retries/offline periods, clearing it after a saved question or a model/focus change. Review warnings alone do not pause generation.
 
-Routine logs report delivery outcome (unchanged, structurally repaired, revised once or fallback), review completeness, advisory counts, model, timing and calls, without question text. An opt-in internal trace hook retains private drafts and reviewer findings for local evaluation.
+Routine logs report delivery outcome (unchanged, structurally repaired, revised once or fallback), review completeness, advisory counts, model, timing and calls, without question text. An opt-in internal trace hook retains private drafts and reviewer findings for local evaluation. Set `QUESTION_GENERATION_LOG_LEVEL=verbose` (or `debug`) in `.env.local` and restart the server to print each call's full result with `console.debug`. Default `info` omits these payloads. Verbose output uses one JSON line per completed call with the prefix `[question-generation:verbose]`, request ID, stage, round, stable call number, model, duration, result, and available usage/grounding/finish metadata. Malformed JSON is logged as raw result text; provider errors expose safe codes/status instead of raw exception bodies. A successful call log means the provider returned, not that the draft passed validation. Prompts, headers, SDK request objects and private reasoning are not logged; the configured API key is defensively redacted. Model outputs include answer keys, so verbose logging is opt-in and server-only.
+
+For a temporary local run and only verbose results:
+
+```sh
+QUESTION_GENERATION_LOG_LEVEL=verbose npm run dev 2>&1 | rg '\[question-generation:verbose\]'
+```
+
+Remove the pipe to see all logs, or use `rg -v '\[question-generation:verbose\]'` to hide payload lines. An explicit value in `.env.local` takes precedence in the current Vite configuration.
 
 Every question and encounter records blueprint tags; questions and generation events also record blueprint, curriculum, crosswalk and prompt versions. Questions retain the selected enabling-clause identifier. Historical questions are preserved, including those generated before model review was introduced.
 
