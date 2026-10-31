@@ -14,7 +14,7 @@ import {
   type OptionId
 } from "../lib/contracts.js";
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion.js";
-import { clinicalReviewSchema, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewFindings, type ClinicalReview, type EditorialReview } from "./questionReview.js";
+import { clinicalReviewSchema, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewFindings, refinementSchema, refinementPrompt, REFINEMENT_INSTRUCTION, type ClinicalReview, type EditorialReview } from "./questionReview.js";
 
 export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   {
@@ -58,7 +58,7 @@ export const GENERATION_DEADLINE_MS = 285_000;
 export const REVIEW_DEADLINE_MS = 90_000;
 export type GenerationTrace = {
   requestId: string;
-  stage: "candidate" | "clinical" | "editorial" | "validation" | "decision";
+  stage: "candidate" | "clinical" | "editorial" | "refinement" | "validation" | "decision";
   round: number;
   data: unknown;
 };
@@ -100,7 +100,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       console.warn(`[question-generation] requestId=${requestId} verbose logging failed`);
     }
   };
-  async function call(stage: "candidate" | "clinical" | "editorial", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
+  async function call(stage: "candidate" | "clinical" | "editorial" | "refinement", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
     callSignal.throwIfAborted();
     const callNumber = ++calls;
     const callStarted = Date.now();
@@ -219,39 +219,52 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     const findings = reviewFindings(parsed, clinical, editorial);
     const issues = findings.corrections.map((finding) => `${finding.reviewer}.${finding.kind}`);
     if (reviewFailures.length) console.warn(`[question-generation] requestId=${requestId} reviewIncomplete=${reviewFailures.join(",")}`);
-    let outcome = candidateCalls > 1 ? "repaired" : "unchanged";
-    let revisionFailure: string | undefined;
-    if (issues.length && candidateCalls < 2) {
-      trace("decision", candidateCalls, { accepted: false, outcome: "revision_requested", issues, advisories: findings.advisories, reviewFailures, calls });
-      console.info(`[question-generation] requestId=${requestId} revising once issues=${issues.join(",")}`);
-      feedback = { corrections: findings.corrections, advisories: findings.advisories, clinical, editorial, grounding };
-      previousDraft = original;
-      try {
-        parsed = await candidate();
-        outcome = "revised";
-      } catch (error) {
-        if (signal.aborted) throw error;
-        revisionFailure = failureCode(error);
-        if (findings.hasCorrectnessDefect) {
-          trace("decision", candidateCalls, { accepted: false, outcome: "rejected_correctness", issues: [], revisionFailure, reviewFailures, calls });
-          throw new GenerationError("QUALITY_REJECTED", "Unable to correct a demonstrated question defect", 502);
-        }
-        parsed = original;
-        outcome = "fallback";
-        console.warn(`[question-generation] requestId=${requestId} revisionFailed=${revisionFailure} delivering original valid draft`);
+    const refinementRound = candidateCalls + 1;
+    const reviewFeedback = {
+      corrections: findings.corrections, advisories: findings.advisories,
+      clinical: clinical ?? null, editorial: editorial ?? null, grounding: grounding ?? null, reviewFailures
+    };
+    trace("decision", candidateCalls, { accepted: false, outcome: "refinement_requested", issues, advisories: findings.advisories, reviewFailures, calls });
+    let outcome: "refined_changed" | "refined_unchanged" | "fallback";
+    let refinementFailure: string | undefined;
+    let refinementSummary: string;
+    let changed = false;
+    try {
+      const response = await call("refinement", refinementRound, refinementPrompt(input, original, reviewFeedback), refinementSchema, REFINEMENT_INSTRUCTION);
+      const refined = refinementSchema.parse(JSON.parse(response.text ?? ""));
+      validateQuestionQuality(refined.question, input.avoidSignatures, input.blueprint);
+      parsed = refined.question;
+      // Compare validated content, not the model's self-assessment or an internal
+      // scenario signature. Both objects have the same schema-defined key order.
+      changed = JSON.stringify({ ...parsed, vignetteSignature: "" }) !== JSON.stringify({ ...original, vignetteSignature: "" });
+      outcome = changed ? "refined_changed" : "refined_unchanged";
+      refinementSummary = refined.summary;
+      trace("refinement", refinementRound, { question: parsed, summary: refinementSummary, changed });
+    } catch (error) {
+      if (signal.aborted) throw error;
+      refinementFailure = error instanceof z.ZodError || error instanceof SyntaxError ? "INVALID_REFINEMENT" : failureCode(error);
+      if (findings.hasCorrectnessDefect) {
+        refinementSummary = "Final refinement failed; the original draft has a demonstrated correctness defect and was not delivered.";
+        trace("refinement", refinementRound, { unavailable: true, code: refinementFailure, summary: refinementSummary });
+        trace("decision", refinementRound, { accepted: false, outcome: "rejected_correctness", issues: [], refinementFailure, refinementSummary, reviewFailures, calls });
+        verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome: "rejected_correctness", summary: refinementSummary, refinementFailure, calls });
+        throw new GenerationError("QUALITY_REJECTED", "Unable to refine a demonstrated question defect", 502);
       }
-    } else if (findings.hasCorrectnessDefect) {
-      // A structural repair already consumed the second candidate call.
-      trace("decision", candidateCalls, { accepted: false, outcome: "rejected_correctness", issues, reviewFailures, calls });
-      throw new GenerationError("QUALITY_REJECTED", "A demonstrated question defect remains after the available repair", 502);
+      parsed = original;
+      outcome = "fallback";
+      refinementSummary = "Final refinement failed; retained the valid original draft because no completed review identified a demonstrated correctness defect.";
+      trace("refinement", refinementRound, { unavailable: true, code: refinementFailure, summary: refinementSummary, changed: false });
+      console.warn(`[question-generation] requestId=${requestId} refinementFailed=${refinementFailure} delivering original valid draft`);
     }
     signal.throwIfAborted();
-    trace("decision", candidateCalls, {
+    verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome, changed, summary: refinementSummary, refinementFailure, calls });
+    trace("decision", refinementRound, {
       accepted: true, outcome, issues: [], advisories: findings.advisories,
-      unresolvedSuggestions: outcome === "revised" ? [] : issues,
-      reviewIncomplete: reviewFailures.length > 0, reviewFailures, revisionFailure, calls
+      unresolvedSuggestions: outcome === "fallback" ? issues : [],
+      reviewIncomplete: reviewFailures.length > 0, reviewFailures, refinementFailure,
+      refinementSummary, changed, initialCandidateCalls: candidateCalls, calls
     });
-    console.info(`[question-generation] requestId=${requestId} delivered outcome=${outcome} reviewIncomplete=${reviewFailures.length > 0} advisories=${findings.advisories.length} candidates=${candidateCalls} calls=${calls} durationMs=${Date.now() - startedAt}`);
+    console.info(`[question-generation] requestId=${requestId} delivered outcome=${outcome} reviewIncomplete=${reviewFailures.length > 0} advisories=${findings.advisories.length} initialCandidates=${candidateCalls} calls=${calls} durationMs=${Date.now() - startedAt}`);
     return {
       ...shuffleQuestionOptions(parsed), id: crypto.randomUUID(), topicId: input.topicId,
       topicTitle: objective.title, category: input.blueprint.discipline, model: input.model,

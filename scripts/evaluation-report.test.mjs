@@ -18,10 +18,12 @@ describe('offline evaluation reports', () => {
     const results = [{ ...item, trace: [
       { stage: 'candidate', round: 2, data: {} },
       { stage: 'decision', data: { accepted: false, issues: ['editorial.noAnswerGiveaways'] } },
-      { stage: 'decision', data: { accepted: true, issues: [] } }
+      { stage: 'refinement', data: { changed: true, summary: 'Clarified the decisive case fact.' } },
+      { stage: 'decision', data: { accepted: true, outcome: 'refined_changed', changed: true, refinementSummary: 'Clarified the decisive case fact.', issues: [] } }
     ] }, { id: 'two', status: 502, body: { error: { code: 'QUALITY_REJECTED' } } }];
     expect(summarizeResults(results)).toMatchObject({
-      attempted: 2, accepted: 1, failed: 1, revisedItems: 1,
+      attempted: 2, accepted: 1, failed: 1, revisedItems: 1, initialRepairItems: 1, refinementPasses: 1,
+      refinementSummaries: [{ id: 'one', outcome: 'refined_changed', changed: true, summary: 'Clarified the decisive case fact.' }],
       correctionRequests: { 'editorial.noAnswerGiveaways': 1 },
       lengthSignals: [{ id: 'one', uniquelyLongestKey: true }]
     });
@@ -34,6 +36,19 @@ describe('offline evaluation reports', () => {
     expect(summarizeResults(results)).toMatchObject({
       accepted: 1, failed: 0, deliveryOutcomes: { unchanged: 1 },
       reviewIncompleteItems: 1, advisoryItems: 1, reviewFailures: { 'clinical.INVALID_REVIEW': 1 }, correctionRequests: {}
+    });
+  });
+
+  it('does not count a preserved refinement or a failed refinement as changed content', () => {
+    const rows = [
+      { ...item, trace: [{ stage: 'refinement', data: { changed: false, summary: 'Preserved after considering both reviews.' } },
+        { stage: 'decision', data: { accepted: true, outcome: 'refined_unchanged', changed: false, refinementSummary: 'Preserved after considering both reviews.' } }] },
+      { ...item, id: 'fallback', trace: [{ stage: 'refinement', data: { unavailable: true, changed: false } },
+        { stage: 'decision', data: { accepted: true, outcome: 'fallback' } }] }
+    ];
+    expect(summarizeResults(rows)).toMatchObject({
+      revisedItems: 0, initialRepairItems: 0, refinementPasses: 2,
+      deliveryOutcomes: { refined_unchanged: 1, fallback: 1 }
     });
   });
 

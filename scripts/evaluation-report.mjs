@@ -13,11 +13,13 @@ export function summarizeResults(results) {
   for (const event of decisions) for (const issue of event.data.issues ?? []) correctionRequests[issue] = (correctionRequests[issue] ?? 0) + 1;
   const deliveryOutcomes = {};
   const reviewFailures = {};
+  const refinementSummaries = [];
   let reviewIncompleteItems = 0;
   let advisoryItems = 0;
   for (const result of results) {
     const finalDecision = (result.trace ?? []).filter((e) => e.stage === "decision").at(-1)?.data;
     if (!finalDecision) continue;
+    if (finalDecision.refinementSummary) refinementSummaries.push({ id: result.id, outcome: finalDecision.outcome, changed: finalDecision.changed, summary: finalDecision.refinementSummary });
     if (finalDecision.accepted && finalDecision.outcome) deliveryOutcomes[finalDecision.outcome] = (deliveryOutcomes[finalDecision.outcome] ?? 0) + 1;
     if (finalDecision.reviewIncomplete) reviewIncompleteItems += 1;
     if (finalDecision.advisories?.length) advisoryItems += 1;
@@ -31,7 +33,10 @@ export function summarizeResults(results) {
   });
   return {
     attempted: results.length, accepted: accepted.length, failed: results.length - accepted.length,
-    revisedItems: results.filter((r) => (r.trace ?? []).some((e) => e.stage === "candidate" && e.round > 1)).length,
+    revisedItems: results.filter((r) => (r.trace ?? []).some((e) => e.stage === "refinement" && e.data.changed === true)).length,
+    initialRepairItems: results.filter((r) => (r.trace ?? []).some((e) => e.stage === "candidate" && e.round > 1)).length,
+    refinementPasses: results.filter((r) => (r.trace ?? []).some((e) => e.stage === "refinement")).length,
+    refinementSummaries,
     correctionRequests, deliveryOutcomes, reviewIncompleteItems, advisoryItems, reviewFailures, lengthSignals, note: "Length and options-only signals are diagnostic, not automatic rejection rules."
   };
 }

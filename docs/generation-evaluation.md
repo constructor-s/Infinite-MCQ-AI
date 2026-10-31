@@ -117,3 +117,25 @@ Offline evaluation version 4 distinguishes actual request failures from correcti
 Regression tests cover the three/four-call bounds, structural repair sharing the same budget, no re-review cycle, advisory disagreement/uncertainty, absent grounding, retained optional metadata, independent reviewer failures, reviewer timeouts, preservation of usable corrections, invalid revisions and fallback restrictions. Feedback, queue and persistent-error regressions remain in the full suite. The production build and typecheck are also checked before committing. Further checks should be based on actual failure traces and local question ratings rather than reinstating strict citation or perfection gates.
 
 Final validation for v6: all 162 tests across 22 files passed with `npm test -- --maxWorkers=1`; typecheck and production build passed. An earlier parallel test/build run encountered worker-startup and wall-clock timeouts; the serial rerun passed without changing tests or timeout limits.
+
+## Always-on final refinement v7 — October 31, 2026
+
+The normal workflow is now **initial draft → two parallel checks → final refinement → deliver**, using four model calls. An invalid initial draft can receive one structural repair before the checks, for at most five calls. The repair does not consume final refinement. Reviewers run once; the final envelope is checked deterministically without another model review or recursive repair.
+
+Reviewer prompts no longer predict that valid questions should remain unchanged. They ask for balanced observations and distinguish harmless nuance from missing facts that could change the answer or make another option defensible. The seventh editorial example covers explanations assuming a condition was stable, controlled or treated without those facts appearing in the vignette. Prose findings should name options rather than reference shuffled letters.
+
+The final editor always receives the validated original draft and assignment/objective, both available reviews with clinical IDs mapped to the draft, every advisory, optional grounding and reviewer-failure diagnostics. It can make targeted changes or preserve the question when feedback is unsupported. It must not silently invent missing case facts to rationalize the intended answer. Search remains optional and available only to the clinical reviewer; citation gaps do not gate delivery.
+
+Final output uses a private `{question, summary}` envelope. Only the validated question is returned publicly. `stage=refinement` call logs retain the raw envelope when verbose logging is enabled. A separate verbose `refinement_result` event and local trace retain the validated outcome and summary. `refined_changed` versus `refined_unchanged` is computed from schema-normalized question fields, ignoring the internal vignette signature; it does not trust a model-reported change flag. If refinement fails, `fallback` is allowed only when no completed review identified a demonstrated correctness defect. Cancellation and overall deadlines still stop the request.
+
+### Live smoke test
+
+A single held-out medicine/laboratory-interpretation assignment completed successfully with Gemini 3.5 Flash-Lite in **four calls and approximately 24 seconds**. Both reviewers completed with empty correction arrays and one advisory each. The final editor received those advisories and changed a distractor from “Hereditary spherocytosis with an aplastic crisis” to “Hereditary spherocytosis,” alongside related hint/explanation edits. The initial case and intended answer were preserved. The local artifact is `/tmp/iworld-refinement-smoke-v7.json`.
+
+This run demonstrates that advisory-only feedback now reaches an actual refinement pass; in v6 it would have been logged without triggering revision. The before/after trace confirms the option-text edit described in the summary. The summary imprecisely attributes the motivating observation to the editorial reviewer; the raw trace shows it came from the clinical reviewer. Summaries remain model-written descriptions, not verified provenance or independent clinical validation. No extra model calls were spent adjudicating the item or its summary.
+
+### Verification and reporting
+
+All 175 tests across 22 files pass with `npm test -- --maxWorkers=1`. Focused tests cover four-call delivery with corrections/advisories/no findings, independent reviewer failures, all feedback and mapped IDs in final-editor input, the five-call initial-repair limit, changed/unchanged detection, signature-only changes, private summaries, invalid envelopes, fallback restrictions, cancellation and verbose logging. Typecheck and production build are checked before committing.
+
+Offline evaluation version 5 now separates initial-repair counts, final-refinement passes, actual changed-question counts and refinement summaries. Prompt version `mccqe-refined-v7` prevents reuse of earlier cached results. User ratings remain local leads for later investigation, without automatic prompt or answer updates. No UI, public question schema, database migration, queue size, retry schedule or persistent-error behavior changes were introduced.

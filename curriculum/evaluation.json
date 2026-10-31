@@ -1,5 +1,5 @@
 {
-  "version": "offline-evaluation-v4",
+  "version": "offline-evaluation-v5",
   "purpose": "Held-out assignments and manual rubric for the reviewed generation workflow. Never imported into prompts. Model reviews are not clinical certification.",
   "calibrationSource": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
   "rubric": [
@@ -17,7 +17,7 @@
     "One close distractor is attractive for a recognizable misconception and inferior because of explicit supplied facts.",
     "The actual decision represents the assigned objective rather than merely mentioning its topic.",
     "Grounding is optional. Source gaps do not trigger rejection or revision; assess concrete clinical defects separately from citation availability.",
-    "Advisory wording suggestions alone do not require revision. Inspect whether revisions introduce new defects."
+    "Both reviews and every advisory reach the final editor. The final summary explains actual changes or preservation, and refinement must not introduce unsupported facts or new defects."
   ],
   "cases": [
     {
