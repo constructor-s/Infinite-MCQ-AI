@@ -1,57 +1,43 @@
 import { describe, expect, it } from "vitest";
-import { clinicalReviewSchema, editorialReviewSchema, reviewIssues, type ClinicalReview, type EditorialReview } from "./questionReview";
+import { clinicalReviewSchema, editorialReviewSchema, reviewFindings, type ClinicalReview, type EditorialReview } from "./questionReview";
 import { makeQuestion } from "../test/fixtures";
 
 function reviews(): { clinical: ClinicalReview; editorial: EditorialReview } {
-  const pass = { status: "pass", evidence: "Explicit supplied findings distinguish the alternatives.", correction: "" };
   return {
-    clinical: clinicalReviewSchema.parse({
-      answerId: "A", strongestDistractorId: "B", distractorAppeal: "A similar presentation could fit B.",
-      decisiveCaseFact: "The supplied ECG identifies an urgent vascular presentation.",
-      verificationCategory: "none", references: [],
-      criteria: Object.fromEntries(Object.keys(clinicalReviewSchema.shape.criteria.shape).map((key) => [key, pass]))
-    }),
-    editorial: editorialReviewSchema.parse({
-      criteria: Object.fromEntries(Object.keys(editorialReviewSchema.shape.criteria.shape).map((key) => [key, pass])),
-      polish: { status: "fail", evidence: "A sentence could be shorter.", correction: "Optional trim." }
-    })
+    clinical: { answerId: "A", strongestDistractorId: "B", decisiveCaseFact: "The supplied ECG distinguishes the choices.", corrections: [], advisories: [] },
+    editorial: { corrections: [], advisories: ["A sentence could be shorter."] }
   };
 }
 
-describe("semantic acceptance gate", () => {
-  it("requires an independently agreed key and a different strong distractor", () => {
+describe("lenient review findings", () => {
+  it("keeps disagreement and a missing strong distractor advisory", () => {
     const { clinical, editorial } = reviews();
-    expect(reviewIssues(makeQuestion(), clinical, editorial)).toEqual([]);
-    clinical.answerId = null;
-    expect(reviewIssues(makeQuestion(), clinical, editorial)).toContain("clinical.answerDisagreement");
     clinical.answerId = "B";
-    expect(reviewIssues(makeQuestion(), clinical, editorial)).toContain("clinical.missingStrongDistractor");
+    const findings = reviewFindings(makeQuestion(), clinical, editorial);
+    expect(findings.corrections).toEqual([]);
+    expect(findings.hasCorrectnessDefect).toBe(false);
+    expect(findings.advisories).toHaveLength(3);
   });
 
-  it("rejects ambiguity, topic drift and giveaway wording while allowing advisory polish", () => {
+  it("distinguishes demonstrated correctness defects from editorial improvement", () => {
     const { clinical, editorial } = reviews();
-    clinical.criteria.singleBestAnswer.status = "uncertain";
-    clinical.criteria.topicAlignment.status = "fail";
-    editorial.criteria.noAnswerGiveaways.status = "fail";
-    const issues = reviewIssues(makeQuestion(), clinical, editorial);
-    expect(issues).toEqual(["clinical.topicAlignment", "clinical.singleBestAnswer", "editorial.noAnswerGiveaways"]);
+    editorial.corrections.push({ kind: "answer_giveaway", evidence: "One choice bundles uniquely comprehensive care.", correction: "Compare equivalent dispositions." });
+    expect(reviewFindings(makeQuestion(), clinical, editorial).hasCorrectnessDefect).toBe(false);
+    clinical.corrections.push({ kind: "ambiguity", evidence: "Two choices fit all supplied facts with no priority.", correction: "Supply the decisive timing fact." });
+    expect(reviewFindings(makeQuestion(), clinical, editorial).hasCorrectnessDefect).toBe(true);
   });
 
-  it("requires real retrieved references for a source-sensitive clinical claim", () => {
+  it("requires no citation or verification fields, and ignores legacy reference gaps", () => {
     const { clinical, editorial } = reviews();
-    clinical.verificationCategory = "jurisdiction";
-    clinical.references = [{ chunkIndex: 0, supportedClaim: "The specified jurisdiction requires reporting under these circumstances." }];
-    expect(reviewIssues(makeQuestion(), clinical, editorial)).toContain("clinical.missingVerification");
-    const grounding = { webSearchQueries: ["official regulator reporting requirements"], groundingChunks: [{ web: { uri: "https://www.cpso.on.ca/", title: "Official guidance" } }] };
-    expect(reviewIssues(makeQuestion(), clinical, editorial, grounding)).toEqual([]);
-    clinical.references[0].chunkIndex = 99;
-    expect(reviewIssues(makeQuestion(), clinical, editorial, grounding)).toContain("clinical.unresolvedReference");
+    const parsed = clinicalReviewSchema.parse({ ...clinical, verificationCategory: "jurisdiction", references: [{ chunkIndex: 999 }] });
+    expect(parsed).not.toHaveProperty("references");
+    expect(parsed).not.toHaveProperty("verificationCategory");
+    expect(reviewFindings(makeQuestion(), parsed, editorial).corrections).toEqual([]);
   });
 
-  it("rejects incomplete reviews instead of treating omitted checks as passed", () => {
-    const { clinical } = reviews();
-    const incomplete = structuredClone(clinical) as Record<string, unknown>;
-    incomplete.criteria = { clinicalAccuracy: clinical.criteria.clinicalAccuracy };
-    expect(clinicalReviewSchema.safeParse(incomplete).success).toBe(false);
+  it("requires explicit, actionable corrections but tolerates unavailable reviewers", () => {
+    expect(editorialReviewSchema.safeParse({ corrections: [{ kind: "clinical_error", evidence: "", correction: "" }], advisories: [] }).success).toBe(false);
+    expect(clinicalReviewSchema.safeParse({}).success).toBe(false);
+    expect(reviewFindings(makeQuestion()).corrections).toEqual([]);
   });
 });

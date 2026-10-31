@@ -22,8 +22,19 @@ describe('offline evaluation reports', () => {
     ] }, { id: 'two', status: 502, body: { error: { code: 'QUALITY_REJECTED' } } }];
     expect(summarizeResults(results)).toMatchObject({
       attempted: 2, accepted: 1, failed: 1, revisedItems: 1,
-      criteriaFailures: { 'editorial.noAnswerGiveaways': 1 },
+      correctionRequests: { 'editorial.noAnswerGiveaways': 1 },
       lengthSignals: [{ id: 'one', uniquelyLongestKey: true }]
     });
   });
+  it('separates best-effort warnings and advisories from actual request failures', () => {
+    const results = [{ ...item, trace: [{ stage: 'decision', data: {
+      accepted: true, outcome: 'unchanged', reviewIncomplete: true,
+      reviewFailures: ['clinical.INVALID_REVIEW'], advisories: ['A minor wording suggestion.'], issues: []
+    } }] }];
+    expect(summarizeResults(results)).toMatchObject({
+      accepted: 1, failed: 0, deliveryOutcomes: { unchanged: 1 },
+      reviewIncompleteItems: 1, advisoryItems: 1, reviewFailures: { 'clinical.INVALID_REVIEW': 1 }, correctionRequests: {}
+    });
+  });
+
 });

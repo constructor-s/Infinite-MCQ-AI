@@ -9,8 +9,20 @@ export function reusableResults(previous, evaluation, promptVersion, { optionsOn
 export function summarizeResults(results) {
   const accepted = results.filter((r) => r.status === 200);
   const decisions = results.flatMap((r) => (r.trace ?? []).filter((e) => e.stage === "decision"));
-  const criteriaFailures = {};
-  for (const event of decisions) for (const issue of event.data.issues ?? []) criteriaFailures[issue] = (criteriaFailures[issue] ?? 0) + 1;
+  const correctionRequests = {};
+  for (const event of decisions) for (const issue of event.data.issues ?? []) correctionRequests[issue] = (correctionRequests[issue] ?? 0) + 1;
+  const deliveryOutcomes = {};
+  const reviewFailures = {};
+  let reviewIncompleteItems = 0;
+  let advisoryItems = 0;
+  for (const result of results) {
+    const finalDecision = (result.trace ?? []).filter((e) => e.stage === "decision").at(-1)?.data;
+    if (!finalDecision) continue;
+    if (finalDecision.accepted && finalDecision.outcome) deliveryOutcomes[finalDecision.outcome] = (deliveryOutcomes[finalDecision.outcome] ?? 0) + 1;
+    if (finalDecision.reviewIncomplete) reviewIncompleteItems += 1;
+    if (finalDecision.advisories?.length) advisoryItems += 1;
+    for (const failure of finalDecision.reviewFailures ?? []) reviewFailures[failure] = (reviewFailures[failure] ?? 0) + 1;
+  }
   const lengthSignals = accepted.map((r) => {
     const lengths = r.body.options.map((o) => ({ id: o.id, words: o.text.trim().split(/\s+/).length }));
     const maximum = Math.max(...lengths.map((o) => o.words));
@@ -20,6 +32,6 @@ export function summarizeResults(results) {
   return {
     attempted: results.length, accepted: accepted.length, failed: results.length - accepted.length,
     revisedItems: results.filter((r) => (r.trace ?? []).some((e) => e.stage === "candidate" && e.round > 1)).length,
-    criteriaFailures, lengthSignals, note: "Length and options-only signals are diagnostic, not automatic rejection rules."
+    correctionRequests, deliveryOutcomes, reviewIncompleteItems, advisoryItems, reviewFailures, lengthSignals, note: "Length and options-only signals are diagnostic, not automatic rejection rules."
   };
 }

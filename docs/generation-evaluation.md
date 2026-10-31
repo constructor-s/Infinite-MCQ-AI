@@ -91,3 +91,29 @@ For future quality changes, inspect actual rejected criteria and `LocalStudyRepo
 ### Verification
 
 The full automated suite, TypeScript checks and production build pass. The build retains dependency annotation and bundle-size warnings. Chrome access was not approved, so visual inspection in light/dark and narrow layouts was unavailable. Component tests cover optional controls, accessible labels/state, restored ratings, late navigation reads, failed writes and keyboard interaction; an additive migration test preserves existing questions, settings and queued records. No production deployment was performed.
+
+## Lenient review v6 — October 31, 2026
+
+The earlier strict acceptance gate has been replaced with **generate → two parallel reviews → optionally revise once → deliver**. Three model calls are normal and four is the maximum: two candidate calls shared between structural repair and substantive revision, plus one call to each reviewer. Revised candidates receive deterministic validation without a second model-review cycle.
+
+The clinical reviewer remains blind to the key and teaching; the editorial reviewer retains its annotated construction examples. Review schemas now separate concrete correction requests from advisory observations. Uncertainty, a different preferred answer, imperfect distractors and minor wording concerns do not by themselves trigger revision. Concrete wrong clinical teaching, genuine ambiguity, missing decisive information, topic mismatch or obvious wording/hint giveaways can request one correction. The generator remains zero-shot.
+
+Google Search is still available only to the clinical reviewer, entirely optionally. Mandatory verification categories, forced searches, model-generated citation indexes and citation acceptance checks have been removed. Missing citations, unavailable sources and absent grounding metadata never reject an item or use a revision. Available grounding metadata remains in the local trace for inspection.
+
+Reviewers complete independently with a shared 90-second review deadline. A malformed or unavailable reviewer no longer cancels or discards its counterpart. A valid draft is delivered with a diagnostic warning when review is incomplete, unless a completed reviewer identified a demonstrated correctness defect. If revision fails, the original valid draft is a fallback only when no correctness defect was identified. If structural repair already consumed the second candidate call, a demonstrated correctness defect returns an error; remaining editorial suggestions do not. Overall request cancellation and the existing 285-second application deadline still apply.
+
+The selected model, high thinking effort, three-question queue, background retry schedule, optional local thumbs feedback and persistent Settings failure message are unchanged. Review warnings do not become user-facing generation failures. Ratings remain leads for subsequent investigation, without automatic prompt or answer changes.
+
+### Live smoke test
+
+One held-out medicine/laboratory-interpretation assignment was run through the direct evaluator using Gemini 3.5 Flash-Lite. It returned HTTP-equivalent status 200 after **three calls in approximately 15 seconds**. Both reviewers completed, with no correction requests or advisories, and the original valid candidate was delivered unchanged. The clinical answer was correctly mapped from the blinded option order back to the candidate IDs. No search metadata was returned or required.
+
+The local artifact is `/tmp/iworld-lenient-smoke-v6.json`. This is a provider/workflow integration smoke test of one item, not an independent clinical validation, difficulty calibration, or representative quality study. The earlier v5 quota failure remains historical evidence; this successful v6 smoke test does not replace the outstanding broader evaluation.
+
+### Diagnostics and regression coverage
+
+Offline evaluation version 4 distinguishes actual request failures from correction requests, advisory items, incomplete-review warnings and delivery outcomes (unchanged, repaired, revised, fallback). A reviewer-only quota warning stops the finite offline batch to avoid wasting more calls, even if its valid question was delivered. Production delivery remains best-effort as described above. Prompt-version changes invalidate old cached evaluation results.
+
+Regression tests cover the three/four-call bounds, structural repair sharing the same budget, no re-review cycle, advisory disagreement/uncertainty, absent grounding, retained optional metadata, independent reviewer failures, reviewer timeouts, preservation of usable corrections, invalid revisions and fallback restrictions. Feedback, queue and persistent-error regressions remain in the full suite. The production build and typecheck are also checked before committing. Further checks should be based on actual failure traces and local question ratings rather than reinstating strict citation or perfection gates.
+
+Final validation for v6: all 162 tests across 22 files passed with `npm test -- --maxWorkers=1`; typecheck and production build passed. An earlier parallel test/build run encountered worker-startup and wall-clock timeouts; the serial rerun passed without changing tests or timeout limits.

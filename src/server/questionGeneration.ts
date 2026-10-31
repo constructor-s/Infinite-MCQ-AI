@@ -14,7 +14,7 @@ import {
   type OptionId
 } from "../lib/contracts.js";
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion.js";
-import { clinicalReviewSchema, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewIssues, type ClinicalReview, type EditorialReview } from "./questionReview.js";
+import { clinicalReviewSchema, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewFindings, type ClinicalReview, type EditorialReview } from "./questionReview.js";
 
 export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   {
@@ -55,6 +55,7 @@ export function validateQuestionQuality(question: GeneratedQuestion, avoidSignat
 }
 
 export const GENERATION_DEADLINE_MS = 285_000;
+export const REVIEW_DEADLINE_MS = 90_000;
 export type GenerationTrace = {
   requestId: string;
   stage: "candidate" | "clinical" | "editorial" | "validation" | "decision";
@@ -83,7 +84,6 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   let feedback: unknown;
   let previousDraft: unknown;
   let lastError: GenerationError | undefined;
-  let forceVerification = false;
   const trace = (stage: GenerationTrace["stage"], round: number, data: unknown) => {
     try { options.onTrace?.({ requestId, stage, round, data }); }
     catch { console.warn(`[question-generation] requestId=${requestId} trace failed`); }
@@ -120,80 +120,119 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} durationMs=${Date.now() - callStarted}`);
     }
   }
-  try {
-    for (let round = 1; round <= 3; round += 1) {
-      const response = await call("candidate", round, makePrompt(input, feedback, previousDraft), generatedQuestionSchema, SYSTEM_INSTRUCTION);
-      // Preserve the actual draft for both structural repair and semantic revision.
-      previousDraft = response.text?.slice(0, 40_000) ?? "";
-      let parsed: GeneratedQuestion;
-      try {
-        parsed = generatedQuestionSchema.parse(JSON.parse(response.text ?? ""));
-        previousDraft = parsed;
-        trace("candidate", round, parsed);
-        validateQuestionQuality(parsed, input.avoidSignatures, input.blueprint);
-      } catch (error) {
-        if (!(error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError)) throw error;
-        feedback = error instanceof z.ZodError
-          ? { structuralErrors: error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ").slice(0, 3000) }
-          : { structuralErrors: error instanceof SyntaxError ? "Return valid JSON matching the question schema." : (error as Error).message };
-        lastError = error instanceof GenerationError ? error : new GenerationError("INVALID_GENERATED_QUESTION", "Generated question did not match its schema", 502);
-        trace("validation", round, feedback);
-        console.warn(`[question-generation] requestId=${requestId} round=${round} rejected code=${lastError.code}`);
-        continue;
-      }
-
-      const context = reviewContext(input);
-      const blinded = shuffleQuestionOptions(parsed);
-      // The shuffled key stays in this server scope. Project only learner-visible fields.
-      const blindDraft = { vignette: blinded.vignette, stem: blinded.stem, options: blinded.options.map(({ id, text }) => ({ id, text })) };
-      const siblings = new AbortController();
-      const reviewSignal = AbortSignal.any([signal, siblings.signal]);
-      let clinical: ClinicalReview;
-      let editorial: EditorialReview;
-      let grounding: GroundingMetadata | undefined;
-      try {
-        const results = await Promise.all([
-          call("clinical", round, JSON.stringify({ context, question: blindDraft, forceVerification }), clinicalReviewSchema, CLINICAL_REVIEW_INSTRUCTION + (forceVerification ? " The prior round had a disputed clinical conclusion; search verification is mandatory. Set verificationCategory to uncertain_or_disputed or another applicable non-none category." : ""), reviewSignal)
-            .then((result) => ({ review: clinicalReviewSchema.parse(JSON.parse(result.text ?? "")), grounding: result.candidates?.[0]?.groundingMetadata })),
-          call("editorial", round, JSON.stringify({ context, question: parsed, annotatedExamples: EDITORIAL_EXAMPLES }), editorialReviewSchema, EDITORIAL_REVIEW_INSTRUCTION, reviewSignal)
-            .then((result) => editorialReviewSchema.parse(JSON.parse(result.text ?? "")))
-        ]);
-        clinical = results[0].review;
-        grounding = results[0].grounding;
-        editorial = results[1];
-      } catch (error) {
-        siblings.abort();
-        if (error instanceof z.ZodError || error instanceof SyntaxError) throw new GenerationError("EVALUATION_FAILED", "Question evaluation returned an invalid review", 502);
-        if (error instanceof GenerationError || signal.aborted || /429|resource_exhausted|quota/i.test(error instanceof Error ? error.message : "")) throw error;
-        throw new GenerationError("EVALUATION_FAILED", "Unable to evaluate the generated question", 502);
-      }
-      const blindAnswerId = clinical.answerId;
-      // Map the blind reviewer IDs to the original draft without leaking the key.
-      const originalId = (id: OptionId | null) => id === null ? null : parsed.options.find((option) => option.text === blinded.options.find((option) => option.id === id)?.text)!.id;
-      clinical = { ...clinical, answerId: originalId(clinical.answerId), strongestDistractorId: originalId(clinical.strongestDistractorId) };
-      trace("clinical", round, { review: clinical, blindQuestion: blindDraft, blindAnswerId, grounding });
-      trace("editorial", round, editorial);
-      const issues = reviewIssues(parsed, clinical, editorial, grounding);
-      if (forceVerification && clinical.verificationCategory === "none") issues.push("clinical.disputedVerificationRequired");
-      trace("decision", round, { accepted: !issues.length, issues, calls });
-      if (issues.length) {
-        console.warn(`[question-generation] requestId=${requestId} round=${round} rejected criteria=${issues.join(",")}`);
-        feedback = { issues, clinical, editorial, grounding };
-        forceVerification ||= clinical.answerId !== parsed.correctOptionId || clinical.criteria.clinicalAccuracy.status !== "pass";
-        lastError = new GenerationError("QUALITY_REJECTED", "Question did not pass quality review", 502);
-        continue;
-      }
-      signal.throwIfAborted();
-      console.info(`[question-generation] requestId=${requestId} accepted rounds=${round} calls=${calls} durationMs=${Date.now() - startedAt}`);
-      return {
-        ...shuffleQuestionOptions(parsed), id: crypto.randomUUID(), topicId: input.topicId,
-        topicTitle: objective.title, category: input.blueprint.discipline, model: input.model,
-        generatedAt: new Date().toISOString(), schemaVersion: 2, blueprintVersion: blueprint.version,
-        curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION,
-        enablingObjectiveId: input.enablingObjectiveId, optionOrderVersion: 1
-      };
+  const failureCode = (error: unknown): string => {
+    if (error instanceof z.ZodError || error instanceof SyntaxError) return "INVALID_REVIEW";
+    if (error instanceof GenerationError) return error.code;
+    if (/429|resource_exhausted|quota/i.test(error instanceof Error ? error.message : "")) return "QUOTA_EXHAUSTED";
+    return "PROVIDER_UNAVAILABLE";
+  };
+  let candidateCalls = 0;
+  async function candidate(): Promise<GeneratedQuestion> {
+    candidateCalls += 1;
+    const response = await call("candidate", candidateCalls, makePrompt(input, feedback, previousDraft), generatedQuestionSchema, SYSTEM_INSTRUCTION);
+    previousDraft = response.text?.slice(0, 40_000) ?? "";
+    try {
+      const parsed = generatedQuestionSchema.parse(JSON.parse(response.text ?? ""));
+      previousDraft = parsed;
+      trace("candidate", candidateCalls, parsed);
+      validateQuestionQuality(parsed, input.avoidSignatures, input.blueprint);
+      return parsed;
+    } catch (error) {
+      if (!(error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError)) throw error;
+      feedback = error instanceof z.ZodError
+        ? { structuralErrors: error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ").slice(0, 3000) }
+        : { structuralErrors: error instanceof SyntaxError ? "Return valid JSON matching the question schema." : (error as Error).message };
+      trace("validation", candidateCalls, feedback);
+      lastError = error instanceof GenerationError ? error : new GenerationError("INVALID_GENERATED_QUESTION", "Generated question did not match its schema", 502);
+      throw lastError;
     }
-    throw lastError ?? new GenerationError("QUALITY_REJECTED", "Question did not pass quality review", 502);
+  }
+  try {
+    let parsed: GeneratedQuestion;
+    try { parsed = await candidate(); }
+    catch (error) {
+      // Only structural validation gets one repair. Provider errors are real
+      // request failures, and there is no draft to fall back to at this point.
+      if (error !== lastError) throw error;
+      parsed = await candidate();
+    }
+    const original = parsed;
+    const context = reviewContext(input);
+    const blinded = shuffleQuestionOptions(parsed);
+    const blindDraft = { vignette: blinded.vignette, stem: blinded.stem, options: blinded.options.map(({ id, text }) => ({ id, text })) };
+    const reviewSignal = AbortSignal.any([signal, AbortSignal.timeout(REVIEW_DEADLINE_MS)]);
+    // Independent results: a failed reviewer must not cancel or discard the other.
+    const results = await Promise.allSettled([
+      call("clinical", candidateCalls, JSON.stringify({ context, question: blindDraft }), clinicalReviewSchema, CLINICAL_REVIEW_INSTRUCTION, reviewSignal)
+        .then((result) => ({ review: clinicalReviewSchema.parse(JSON.parse(result.text ?? "")), grounding: result.candidates?.[0]?.groundingMetadata })),
+      call("editorial", candidateCalls, JSON.stringify({ context, question: parsed, annotatedExamples: EDITORIAL_EXAMPLES }), editorialReviewSchema, EDITORIAL_REVIEW_INSTRUCTION, reviewSignal)
+        .then((result) => editorialReviewSchema.parse(JSON.parse(result.text ?? "")))
+    ]);
+    signal.throwIfAborted();
+    let clinical: ClinicalReview | undefined;
+    let editorial: EditorialReview | undefined;
+    let grounding: GroundingMetadata | undefined;
+    const reviewFailures: string[] = [];
+    if (results[0].status === "fulfilled") {
+      const raw = results[0].value.review;
+      const originalId = (id: OptionId | null) => id === null ? null : parsed.options.find((option) => option.text === blinded.options.find((option) => option.id === id)?.text)!.id;
+      clinical = { ...raw, answerId: originalId(raw.answerId), strongestDistractorId: originalId(raw.strongestDistractorId) };
+      grounding = results[0].value.grounding;
+      trace("clinical", candidateCalls, { review: clinical, blindQuestion: blindDraft, blindAnswerId: raw.answerId, grounding });
+    } else {
+      reviewFailures.push(`clinical.${failureCode(results[0].reason)}`);
+      trace("clinical", candidateCalls, { unavailable: true, code: failureCode(results[0].reason) });
+    }
+    if (results[1].status === "fulfilled") {
+      editorial = results[1].value;
+      trace("editorial", candidateCalls, editorial);
+    } else {
+      reviewFailures.push(`editorial.${failureCode(results[1].reason)}`);
+      trace("editorial", candidateCalls, { unavailable: true, code: failureCode(results[1].reason) });
+    }
+    const findings = reviewFindings(parsed, clinical, editorial);
+    const issues = findings.corrections.map((finding) => `${finding.reviewer}.${finding.kind}`);
+    if (reviewFailures.length) console.warn(`[question-generation] requestId=${requestId} reviewIncomplete=${reviewFailures.join(",")}`);
+    let outcome = candidateCalls > 1 ? "repaired" : "unchanged";
+    let revisionFailure: string | undefined;
+    if (issues.length && candidateCalls < 2) {
+      trace("decision", candidateCalls, { accepted: false, outcome: "revision_requested", issues, advisories: findings.advisories, reviewFailures, calls });
+      console.info(`[question-generation] requestId=${requestId} revising once issues=${issues.join(",")}`);
+      feedback = { corrections: findings.corrections, advisories: findings.advisories, clinical, editorial, grounding };
+      previousDraft = original;
+      try {
+        parsed = await candidate();
+        outcome = "revised";
+      } catch (error) {
+        if (signal.aborted) throw error;
+        revisionFailure = failureCode(error);
+        if (findings.hasCorrectnessDefect) {
+          trace("decision", candidateCalls, { accepted: false, outcome: "rejected_correctness", issues: [], revisionFailure, reviewFailures, calls });
+          throw new GenerationError("QUALITY_REJECTED", "Unable to correct a demonstrated question defect", 502);
+        }
+        parsed = original;
+        outcome = "fallback";
+        console.warn(`[question-generation] requestId=${requestId} revisionFailed=${revisionFailure} delivering original valid draft`);
+      }
+    } else if (findings.hasCorrectnessDefect) {
+      // A structural repair already consumed the second candidate call.
+      trace("decision", candidateCalls, { accepted: false, outcome: "rejected_correctness", issues, reviewFailures, calls });
+      throw new GenerationError("QUALITY_REJECTED", "A demonstrated question defect remains after the available repair", 502);
+    }
+    signal.throwIfAborted();
+    trace("decision", candidateCalls, {
+      accepted: true, outcome, issues: [], advisories: findings.advisories,
+      unresolvedSuggestions: outcome === "revised" ? [] : issues,
+      reviewIncomplete: reviewFailures.length > 0, reviewFailures, revisionFailure, calls
+    });
+    console.info(`[question-generation] requestId=${requestId} delivered outcome=${outcome} reviewIncomplete=${reviewFailures.length > 0} advisories=${findings.advisories.length} candidates=${candidateCalls} calls=${calls} durationMs=${Date.now() - startedAt}`);
+    return {
+      ...shuffleQuestionOptions(parsed), id: crypto.randomUUID(), topicId: input.topicId,
+      topicTitle: objective.title, category: input.blueprint.discipline, model: input.model,
+      generatedAt: new Date().toISOString(), schemaVersion: 2, blueprintVersion: blueprint.version,
+      curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION,
+      enablingObjectiveId: input.enablingObjectiveId, optionOrderVersion: 1
+    };
   } catch (error) {
     if (signal.aborted) throw new GenerationError("GENERATION_TIMEOUT", "Question generation timed out", 504);
     if (error instanceof GenerationError) throw error;

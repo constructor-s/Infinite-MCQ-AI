@@ -18,7 +18,7 @@ export const blueprintTagsSchema = z.object({
 });
 export type BlueprintTags = z.infer<typeof blueprintTagsSchema>;
 export const blueprint = config;
-export const PROMPT_VERSION = "mccqe-reviewed-v5";
+export const PROMPT_VERSION = "mccqe-lenient-v6";
 
 export function sameBlueprint(a: BlueprintTags, b: BlueprintTags): boolean {
   return a.discipline === b.discipline && a.physicianActivity === b.physicianActivity &&

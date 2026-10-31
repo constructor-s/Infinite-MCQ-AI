@@ -87,8 +87,9 @@ try {
     console.log(`${item.id}: ${result.status}${result.body.error ? ` ${result.body.error.code ?? ""}` : ""}`);
     // Quality failures are retained and the remaining finite assignments still run.
     // Stop on missing credentials/quota instead of repeating unusable provider calls.
-    if (["MISSING_API_KEY", "QUOTA_EXHAUSTED"].includes(result.body.error?.code)) {
-      report.stopReason = result.body.error.code;
+    const reviewQuotaExhausted = (row.trace ?? []).some((event) => event.data?.unavailable && event.data?.code === "QUOTA_EXHAUSTED");
+    if (["MISSING_API_KEY", "QUOTA_EXHAUSTED"].includes(result.body.error?.code) || reviewQuotaExhausted) {
+      report.stopReason = reviewQuotaExhausted ? "REVIEW_QUOTA_EXHAUSTED" : result.body.error.code;
       await writeFile(output, JSON.stringify(report, null, 2) + "\n");
       break;
     }

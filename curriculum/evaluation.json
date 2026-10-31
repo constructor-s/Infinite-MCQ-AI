@@ -1,5 +1,5 @@
 {
-  "version": "offline-evaluation-v3",
+  "version": "offline-evaluation-v4",
   "purpose": "Held-out assignments and manual rubric for the reviewed generation workflow. Never imported into prompts. Model reviews are not clinical certification.",
   "calibrationSource": "https://mcc.ca/wp-content/uploads/MCCQE-practice-questions-and-answers-2026.pdf",
   "rubric": [
@@ -16,7 +16,7 @@
     "The key is not identifiable through uniquely comprehensive detail, grammatical clues, implausible alternatives or conspicuous length differences.",
     "One close distractor is attractive for a recognizable misconception and inferior because of explicit supplied facts.",
     "The actual decision represents the assigned objective rather than merely mentioning its topic.",
-    "Source-sensitive claims have relevant retrieved evidence; no invented or unresolved references.",
+    "Grounding is optional. Source gaps do not trigger rejection or revision; assess concrete clinical defects separately from citation availability.",
     "Advisory wording suggestions alone do not require revision. Inspect whether revisions introduce new defects."
   ],
   "cases": [
