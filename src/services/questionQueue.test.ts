@@ -129,6 +129,19 @@ describe("QuestionQueueService", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it("reports a saved question before a later refill failure", async () => {
+    const repository = makeRepository();
+    const progress = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      if (repository.questions.length) throw new Error("Later request failed");
+      const input = JSON.parse(String(init.body));
+      return new Response(JSON.stringify(makeQuestion({ topicId: input.topicId, blueprint: input.blueprint })));
+    }));
+    await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill(progress)).rejects.toThrow("Later request failed");
+    expect(progress).toHaveBeenCalledWith({ ready: 1, target: QUEUE_TARGET, generating: true, focus: null, generationSucceeded: true });
+    expect(repository.questions).toHaveLength(1);
+  });
+
   it("does not persist or count a failed generation and can resume filling", async () => {
     const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()));
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "GENERATION_FAILED", message: "Unavailable" } }), { status: 502 })));

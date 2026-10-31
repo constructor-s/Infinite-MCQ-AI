@@ -18,6 +18,7 @@ export default function App() {
   const mode = encounter?.mode ?? "fresh";
   const [progress, setProgress] = useState(DEFAULT_PROGRESS);
   const [generationError, setGenerationError] = useState("");
+  const [lastGenerationError, setLastGenerationError] = useState("");
   const [busyEncounterId, setBusyEncounterId] = useState<string>();
   const busy = Boolean(encounter && busyEncounterId === encounter.id);
   const [initialized, setInitialized] = useState(false);
@@ -54,6 +55,7 @@ export default function App() {
     void questionQueue.fill((nextProgress) => {
       if (!mountedRef.current || !sameStudyFocus(nextProgress.focus, focusRef.current)) return;
       setProgress(nextProgress);
+      if (nextProgress.generationSucceeded) setLastGenerationError("");
       if (nextProgress.ready > 0) resumeWhenReady();
     }).then(() => {
       if (!mountedRef.current || request !== fillRequestRef.current || !sameStudyFocus(requestedFocus, focusRef.current)) return;
@@ -69,6 +71,7 @@ export default function App() {
             ? reason.message
             : "Question generation is unavailable";
       setGenerationError(message);
+      setLastGenerationError(message);
       setProgress((previous) => ({ ...previous, generating: false }));
       const delays = [5_000, 15_000, 30_000, 60_000, 300_000];
       const delay = delays[Math.min(retryCountRef.current, delays.length - 1)];
@@ -102,6 +105,7 @@ export default function App() {
       if (!active) return;
       setInitialized(true);
       setGenerationError("Could not read local study settings. Reload to try again.");
+      setLastGenerationError("Could not read local study settings. Reload to try again.");
       setProgress(DEFAULT_PROGRESS);
     });
     return () => {
@@ -184,6 +188,7 @@ export default function App() {
     await studyRepository.setSetting("selectedModel", model);
     setSelectedModel(model);
     setGenerationError("");
+    setLastGenerationError("");
     retryCountRef.current = 0;
     startFill();
   };
@@ -200,6 +205,7 @@ export default function App() {
     setFocusNotice("");
     setFocusError("");
     setGenerationError("");
+    setLastGenerationError("");
     retryCountRef.current = 0;
     window.clearTimeout(retryTimerRef.current);
     setProgress({ ready: 0, target: QUEUE_TARGET, generating: navigator.onLine, focus });
@@ -211,7 +217,10 @@ export default function App() {
         setProgress((previous) => ({ ...previous, ready, generating: previous.generating && ready < QUEUE_TARGET }));
       }
     } catch {
-      if (mountedRef.current && sameStudyFocus(focus, focusRef.current)) setGenerationError("Could not read the local queue.");
+      if (mountedRef.current && sameStudyFocus(focus, focusRef.current)) {
+        setGenerationError("Could not read the local queue.");
+        setLastGenerationError("Could not read the local queue.");
+      }
     }
   };
 
@@ -286,6 +295,7 @@ export default function App() {
         offline={!online}
         reviewMode={mode === "review"}
         generationError={generationError}
+        lastGenerationError={lastGenerationError}
         open={settingsOpen}
         selectedModel={selectedModel}
         theme={theme}

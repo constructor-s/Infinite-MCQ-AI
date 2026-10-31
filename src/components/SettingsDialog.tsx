@@ -14,6 +14,7 @@ type Props = {
   offline: boolean;
   reviewMode: boolean;
   generationError?: string;
+  lastGenerationError?: string;
   selectedModel: string;
   theme: Theme;
   studyFocus: StudyFocus;
@@ -40,7 +41,7 @@ function dimensionLabel(value: string): string {
   return dimensionLabels[value] ?? value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApplyFocus, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
+export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApplyFocus, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError, lastGenerationError }: Props) {
   const [recentQuestions, setRecentQuestions] = useState<RecentQuestionTopic[] | null>(null);
   const [historyError, setHistoryError] = useState("");
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
@@ -150,6 +151,9 @@ export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApply
           <span className={`status-dot ${generating ? "is-generating" : ""}`} aria-hidden="true" />
           {studyFocus ? "Focused practice · " : ""}{status}
         </div>
+        {lastGenerationError && (
+          <p className="settings-generation-error" aria-live="polite">Last generation error: {lastGenerationError}</p>
+        )}
         <section className="recent-question-settings" aria-labelledby="recent-question-title">
           <h3 id="recent-question-title">Recent question topics</h3>
           <p className="settings-note">Last 20 completed questions, newest first. Reviews appear once, using the latest completion. Results reflect the first try; reveals count as incorrect.</p>

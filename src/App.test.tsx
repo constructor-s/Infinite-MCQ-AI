@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { db } from "./db/database";
 import { studyRepository } from "./db/repository";
-import { questionQueue, type QueueProgress } from "./services/questionQueue";
+import { questionQueue, fetchModels, type QueueProgress } from "./services/questionQueue";
 import { makeQuestion } from "./test/fixtures";
 import type { ClinicalQuestion } from "./lib/contracts";
 import { questionUrl } from "./lib/questionNavigation";
@@ -43,8 +43,9 @@ async function traverse(direction: "back" | "forward") {
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
-  return { promise, resolve };
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
 }
 
 describe("question navigation", () => {
@@ -179,6 +180,74 @@ describe("question navigation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(questionQueue.fill).toHaveBeenCalledTimes(2));
     expect(await screen.findByRole("button", { name: "Return to mixed practice" })).toBeInTheDocument();
+  });
+
+  it("keeps the latest error across an automatic retry and offline transition, replacing it on failure", async () => {
+    const focus = { discipline: "medicine" as const, objectiveId: "14" };
+    await studyRepository.setStudyFocus(focus);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    const timers = vi.spyOn(window, "setTimeout");
+    const pending = deferred<void>();
+    vi.mocked(questionQueue.fill).mockRejectedValueOnce(new Error("Quota exhausted"))
+      .mockImplementationOnce((callback) => {
+        callback?.({ ready: 0, target: 3, generating: true, focus });
+        return pending.promise;
+      });
+    render(<App />);
+    await screen.findByRole("heading", { name: "Focused generation is paused" });
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    expect(screen.getByText("Last generation error: Quota exhausted")).toBeInTheDocument();
+    const retry = timers.mock.calls.find(([, delay]) => delay === 5_000)?.[0];
+    expect(typeof retry).toBe("function");
+    await act(async () => { (retry as () => void)(); });
+    expect(questionQueue.fill).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("status")).toHaveTextContent("Generating");
+    expect(screen.getByText("Last generation error: Quota exhausted")).toBeInTheDocument();
+    fireEvent(window, new Event("offline"));
+    expect(screen.getByRole("status")).toHaveTextContent("Offline");
+    expect(screen.getByText("Last generation error: Quota exhausted")).toBeInTheDocument();
+    await act(async () => pending.reject(new Error("Review unavailable")));
+    expect(screen.getByText("Last generation error: Review unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("Last generation error: Quota exhausted")).not.toBeInTheDocument();
+  });
+
+  it("clears the historical error after a saved question while the refill is still running", async () => {
+    const focus = { discipline: "medicine" as const, objectiveId: "14" };
+    await studyRepository.setStudyFocus(focus);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    const pending = deferred<void>();
+    vi.mocked(questionQueue.fill).mockRejectedValueOnce(new Error("Previous failure"))
+      .mockImplementationOnce((callback) => { onProgress = callback; return pending.promise; });
+    render(<App />);
+    await screen.findByRole("heading", { name: "Focused generation is paused" });
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    expect(screen.getByText("Last generation error: Previous failure")).toBeInTheDocument();
+    fireEvent(window, new Event("online"));
+    await waitFor(() => expect(questionQueue.fill).toHaveBeenCalledTimes(2));
+    await act(async () => onProgress?.({ ready: 1, target: 3, generating: true, focus, generationSucceeded: true }));
+    expect(screen.queryByText(/Last generation error:/)).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Generating");
+  });
+
+  it.each(["model", "focus"])("clears stale generation errors when changing %s", async (change) => {
+    await studyRepository.setStudyFocus({ discipline: "medicine", objectiveId: "14" });
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.mocked(questionQueue.fill).mockRejectedValueOnce(new Error("Old configuration failure"));
+    vi.mocked(fetchModels).mockResolvedValueOnce({ models: [
+      { id: "gemini-3.5-flash-lite", label: "Economy", description: "Economy model", available: true },
+      { id: "gemini-3.8-flash", label: "Quality", description: "Quality model", available: true }
+    ] });
+    render(<App />);
+    await screen.findByRole("heading", { name: "Focused generation is paused" });
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    expect(screen.getByText("Last generation error: Old configuration failure")).toBeInTheDocument();
+    if (change === "model") {
+      fireEvent.click(await screen.findByRole("radio", { name: /Quality/ }));
+    } else {
+      fireEvent.change(screen.getByLabelText("Practice"), { target: { value: "mixed" } });
+      fireEvent.click(screen.getByRole("button", { name: "Apply focus" }));
+    }
+    await waitFor(() => expect(screen.queryByText(/Last generation error:/)).not.toBeInTheDocument());
   });
 
   it("resets an obsolete persisted focus and shows a brief notice", async () => {

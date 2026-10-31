@@ -38,6 +38,21 @@ describe("SettingsDialog", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ models: [] }), { status: 200 })));
   });
 
+  it("keeps the last error visible while generating and offline, until explicitly cleared", async () => {
+    const message = "Quota exhausted <provider detail>";
+    const { rerender } = render(<SettingsDialog {...props} generationError={message} lastGenerationError={message} />);
+    expect(screen.getByText(`Last generation error: ${message}`)).toBeInTheDocument();
+    rerender(<SettingsDialog {...props} generating generationError="" lastGenerationError={message} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Generating");
+    expect(screen.getByText(`Last generation error: ${message}`)).toBeInTheDocument();
+    rerender(<SettingsDialog {...props} offline lastGenerationError={message} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Offline");
+    expect(screen.getByText(`Last generation error: ${message}`)).toBeInTheDocument();
+    rerender(<SettingsDialog {...props} lastGenerationError="" />);
+    expect(screen.queryByText(/Last generation error:/)).not.toBeInTheDocument();
+    await screen.findAllByText("0/0");
+  });
+
   it("shows completed question titles and readable dimensions", async () => {
     vi.mocked(studyRepository.getRecentQuestionTopics).mockResolvedValue([{ ...makeQuestion({
       topicTitle: "Consent", blueprint: { discipline: "phelo", physicianActivity: "professional_behaviours",

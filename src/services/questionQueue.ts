@@ -7,7 +7,7 @@ import { focusCombinations, sameStudyFocus, type StudyFocus } from "../lib/study
 
 export const QUEUE_TARGET = 3;
 
-export type QueueProgress = { ready: number; target: number; generating: boolean; focus?: StudyFocus };
+export type QueueProgress = { ready: number; target: number; generating: boolean; focus?: StudyFocus; generationSucceeded?: boolean };
 
 type ModelsResponse = { models: ModelOption[]; availabilityUnverified?: boolean };
 
@@ -66,10 +66,13 @@ export class QuestionQueueService {
   }
 
   private async fillUnlocked(onProgress?: (progress: QueueProgress) => void): Promise<void> {
+    let generatedForFocus: StudyFocus | undefined;
     while (true) {
       const focus = await this.repository.getStudyFocus();
       const ready = await this.repository.getFreshCount(focus);
-      onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET, focus });
+      onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET, focus,
+        ...(generatedForFocus !== undefined && sameStudyFocus(generatedForFocus, focus) ? { generationSucceeded: true } : {}) });
+      generatedForFocus = undefined;
       if (ready >= QUEUE_TARGET) {
         if (sameStudyFocus(focus, await this.repository.getStudyFocus())) return;
         continue;
@@ -100,6 +103,9 @@ export class QuestionQueueService {
         }
         await this.repository.enqueue(question);
         await this.repository.logGeneration({ topicId: selection.topicId, model, outcome: "success", ...metadata });
+        // The next existing progress update reports this success before another
+        // request begins, without changing queue reads or refill behavior.
+        generatedForFocus = focus;
       } catch (error) {
         const code = error instanceof ApiError ? error.code : error instanceof DOMException && error.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR";
         try {
