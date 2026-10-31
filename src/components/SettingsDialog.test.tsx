@@ -16,6 +16,8 @@ const props = {
   reviewMode: false,
   selectedModel: "gemini-3.5-flash-lite",
   theme: "light" as const,
+  studyFocus: null,
+  onApplyFocus: vi.fn(async () => undefined),
   onClose: vi.fn(),
   onOpenQuestion: vi.fn(),
   onSelectModel: vi.fn(async () => undefined),

@@ -3,6 +3,7 @@ import { clinicalQuestionSchema, type ClinicalQuestion, type Encounter, type Enc
 import { createLocalId } from "../lib/createLocalId";
 import { blueprint, blueprintTagsSchema } from "../lib/blueprint";
 import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
+import { sameStudyFocus, studyFocusSchema, type StudyFocus } from "../lib/studyFocus";
 
 export type RecentQuestionTopic = ClinicalQuestion & { encounterId: string; outcome: "correct" | "incorrect" | "unknown" };
 
@@ -52,14 +53,15 @@ export class LocalStudyRepository {
     };
   }
 
-  async getFreshQuestions(): Promise<ClinicalQuestion[]> {
+  async getFreshQuestions(focus: StudyFocus = null): Promise<ClinicalQuestion[]> {
     const items = await this.database.queueItems.orderBy("createdAt").toArray();
     const questions = await this.database.questions.bulkGet(items.map((item) => item.questionId));
-    return questions.filter((question): question is ClinicalQuestion => Boolean(question) && question?.schemaVersion === 2);
+    return questions.filter((question): question is ClinicalQuestion => Boolean(question) && question?.schemaVersion === 2 &&
+      sameStudyFocus(question.generationFocus, focus));
   }
 
-  async getFreshCount(): Promise<number> {
-    return (await this.getFreshQuestions()).length;
+  async getFreshCount(focus: StudyFocus = null): Promise<number> {
+    return (await this.getFreshQuestions(focus)).length;
   }
 
   async enqueue(question: ClinicalQuestion): Promise<void> {
@@ -85,10 +87,10 @@ export class LocalStudyRepository {
     return (await this.database.queueItems.toArray()).map((item) => item.topicId);
   }
 
-  async getSamplingContext(): Promise<SamplingContext> {
+  async getSamplingContext(focus: StudyFocus = null): Promise<SamplingContext> {
     return this.database.transaction("r", this.database.questions, this.database.encounters, async () => {
       const tagged = await this.database.questions.orderBy("generatedAt").reverse()
-        .filter((q) => q.schemaVersion === 2).limit(blueprint.coverageWindow).toArray();
+        .filter((q) => q.schemaVersion === 2 && sameStudyFocus(q.generationFocus, focus)).limit(blueprint.coverageWindow).toArray();
       const questions: CoverageRecord[] = tagged.reverse().map((q) => ({ id: q.id, generatedAt: q.generatedAt, blueprint: q.blueprint }));
       const objectiveStats: Record<string, ObjectiveStats> = {};
       const statsFor = (id: string) => objectiveStats[id] ??= { attempts: 0, errors: 0, recentCount: 0 };
@@ -260,6 +262,29 @@ export class LocalStudyRepository {
   async getSetting<T>(key: string, fallback: T): Promise<T> {
     const setting = await this.database.settings.get(key);
     return (setting?.value as T | undefined) ?? fallback;
+  }
+
+  async getStudyFocus(): Promise<StudyFocus> {
+    return this.database.transaction("rw", this.database.settings, async () => {
+      const stored = await this.database.settings.get("studyFocus");
+      const parsed = studyFocusSchema.safeParse(stored?.value ?? null);
+      if (parsed.success) return parsed.data;
+      await this.database.settings.put({ key: "studyFocus", value: null });
+      await this.database.settings.put({ key: "studyFocusResetNotice", value: true });
+      return null;
+    });
+  }
+
+  async takeStudyFocusResetNotice(): Promise<boolean> {
+    return this.database.transaction("rw", this.database.settings, async () => {
+      const notice = await this.database.settings.get("studyFocusResetNotice");
+      await this.database.settings.delete("studyFocusResetNotice");
+      return notice?.value === true;
+    });
+  }
+
+  async setStudyFocus(focus: StudyFocus): Promise<void> {
+    await this.setSetting("studyFocus", studyFocusSchema.parse(focus));
   }
 
   async setSetting<T>(key: string, value: T): Promise<void> {

@@ -69,6 +69,132 @@ describe("question navigation", () => {
     vi.unstubAllGlobals();
   });
 
+  it("applies focus to Next, preserves answers and saved history, and returns to the mixed queue", async () => {
+    const focus = { discipline: "medicine" as const, objectiveId: "14" };
+    const first = makeQuestion({ stem: "Which mixed treatment is most appropriate?" });
+    const second = makeQuestion({ stem: "Which remaining mixed treatment is most appropriate?" });
+    const focused = makeQuestion({ generationFocus: focus, stem: "Which focused treatment is most appropriate?" });
+    await enqueue(first, second, focused);
+    render(<App />);
+    await screen.findByRole("heading", { name: first.stem });
+    fireEvent.click(screen.getByRole("button", { name: /B\s*Outpatient/ }));
+    await screen.findByText(first.options[1].hint);
+    const originalEncounterId = history.state.iworldEncounterId;
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    fireEvent.change(screen.getByLabelText("Practice"), { target: { value: "focused" } });
+    fireEvent.change(screen.getByLabelText("MCC topic"), { target: { value: "14" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply focus" }));
+    await screen.findByText(/Focus saved/);
+    expect(await studyRepository.getStudyFocus()).toEqual(focus);
+    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
+    expect(screen.getByRole("heading", { name: first.stem })).toBeInTheDocument();
+    expect(screen.getByText(first.options[1].hint)).toBeInTheDocument();
+    expect(history.state.iworldEncounterId).toBe(originalEncounterId);
+    expect(screen.getByText(/Applies to the next question/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /A\s*Immediate/ }));
+    await screen.findByText("Answer: A");
+    fireEvent.click(screen.getByRole("button", { name: "Next question" }));
+    await screen.findByRole("heading", { name: focused.stem });
+    expect(screen.queryByText(/Applies to the next question/)).not.toBeInTheDocument();
+    const focusedEncounterId = history.state.iworldEncounterId;
+    await traverse("back");
+    await screen.findByRole("heading", { name: first.stem });
+    expect(history.state.iworldEncounterId).toBe(originalEncounterId);
+    expect(screen.getByText("Answer: A")).toBeInTheDocument();
+    await traverse("forward");
+    await screen.findByRole("heading", { name: focused.stem });
+    fireEvent.click(screen.getByRole("button", { name: /B\s*Outpatient/ }));
+    await screen.findByText(focused.options[1].hint);
+    fireEvent.click(screen.getByRole("button", { name: "Return to mixed practice" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Return to mixed practice" })).not.toBeInTheDocument());
+    expect(screen.getByRole("heading", { name: focused.stem })).toBeInTheDocument();
+    expect(screen.getByText(focused.options[1].hint)).toBeInTheDocument();
+    expect(history.state.iworldEncounterId).toBe(focusedEncounterId);
+    fireEvent.click(screen.getByRole("button", { name: /A\s*Immediate/ }));
+    await screen.findByText("Answer: A");
+    fireEvent.click(screen.getByRole("button", { name: "Next question" }));
+    await screen.findByRole("heading", { name: second.stem });
+    expect(await studyRepository.getStudyFocus()).toBeNull();
+    expect((await studyRepository.getCorrectRates()).recent20).toEqual({ correct: 0, total: 2 });
+  });
+
+  it("restores focused practice after reload and waits for fresh questions instead of reviewing", async () => {
+    const focus = { discipline: "medicine" as const, objectiveId: "14" };
+    const past = makeQuestion({ stem: "Which old treatment is most appropriate?", generationFocus: focus });
+    await complete(past);
+    await studyRepository.setStudyFocus(focus);
+    const view = render(<App />);
+    await screen.findByRole("heading", { name: "You’re offline" });
+    expect(screen.queryByText("Review question")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: past.stem })).not.toBeInTheDocument();
+    view.unmount();
+    render(<App />);
+    await screen.findByRole("heading", { name: "You’re offline" });
+    expect(await studyRepository.getStudyFocus()).toEqual(focus);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    fireEvent(window, new Event("online"));
+    await waitFor(() => expect(onProgress).toBeDefined());
+    const focused = makeQuestion({ generationFocus: focus, stem: "Which fresh focused treatment is most appropriate?" });
+    await enqueue(focused);
+    await act(async () => onProgress?.({ ready: 1, target: 10, generating: true, focus }));
+    await screen.findByRole("heading", { name: focused.stem });
+    expect(screen.queryByText("Review question")).not.toBeInTheDocument();
+  });
+
+  it("returns immediately from focused waiting to the preserved mixed queue", async () => {
+    const mixed = makeQuestion({ stem: "Which queued mixed treatment is most appropriate?" });
+    await enqueue(mixed);
+    await studyRepository.setStudyFocus({ discipline: "psychiatry" });
+    render(<App />);
+    await screen.findByRole("heading", { name: "You’re offline" });
+    fireEvent.click(screen.getByRole("button", { name: "Return to mixed practice" }));
+    await screen.findByRole("heading", { name: mixed.stem });
+    expect(await studyRepository.getStudyFocus()).toBeNull();
+  });
+
+  it("shows a focused-generation failure with retry and a path back to mixed practice", async () => {
+    await studyRepository.setStudyFocus({ discipline: "medicine", objectiveId: "14" });
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.mocked(questionQueue.fill).mockRejectedValueOnce(new Error("Generation unavailable"));
+    render(<App />);
+    await screen.findByRole("heading", { name: "Focused generation is paused" });
+    expect(screen.getByText("Generation unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(questionQueue.fill).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("button", { name: "Return to mixed practice" })).toBeInTheDocument();
+  });
+
+  it("resets an obsolete persisted focus and shows a brief notice", async () => {
+    await studyRepository.setSetting("studyFocus", { discipline: "medicine", objectiveId: "removed" });
+    const mixed = makeQuestion();
+    await enqueue(mixed);
+    render(<StrictMode><App /></StrictMode>);
+    await screen.findByRole("heading", { name: mixed.stem });
+    expect(await screen.findByText("Your saved focus is no longer available. Returned to mixed practice.")).toBeInTheDocument();
+    expect(await studyRepository.getStudyFocus()).toBeNull();
+  });
+
+  it("ignores progress from the inactive queue after changing focus during generation", async () => {
+    const mixed = makeQuestion();
+    await enqueue(mixed);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    const pending = deferred<void>();
+    vi.mocked(questionQueue.fill).mockImplementation((callback) => { onProgress = callback; return pending.promise; });
+    render(<App />);
+    await screen.findByRole("heading", { name: mixed.stem });
+    await waitFor(() => expect(onProgress).toBeDefined());
+    const reportProgress = onProgress!;
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    fireEvent.change(screen.getByLabelText("Practice"), { target: { value: "focused" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply focus" }));
+    await screen.findByText(/Focus saved/);
+    await act(async () => reportProgress({ ready: 10, target: 10, generating: false, focus: null }));
+    expect(screen.getByRole("status")).toHaveTextContent("Focused practice · Generating · 0/10 ready");
+    await act(async () => reportProgress({ ready: 2, target: 10, generating: true, focus: { discipline: "medicine" } }));
+    expect(screen.getByRole("status")).toHaveTextContent("Focused practice · Generating · 2/10 ready");
+    await act(async () => pending.resolve());
+  });
+
   it("replaces root, pushes Next, and restores answers through Back, Forward, and refresh", async () => {
     const first = makeQuestion({ stem: "Which first treatment is most appropriate?" });
     const second = makeQuestion({ stem: "Which second treatment is most appropriate?" });

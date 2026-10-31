@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { ClinicalQuestion, Encounter } from "../lib/contracts";
 import type { BlueprintTags } from "../lib/blueprint";
+import type { FocusedStudy } from "../lib/studyFocus";
 
 export type QueueItem = {
   id: string;
@@ -24,6 +25,7 @@ export type GenerationEvent = {
   crosswalkVersion?: string;
   promptVersion?: string;
   enablingObjectiveId?: string;
+  generationFocus?: FocusedStudy;
 };
 
 export class IWorldDatabase extends Dexie {

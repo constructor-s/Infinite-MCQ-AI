@@ -3,6 +3,8 @@ import type { ModelOption, Theme } from "../lib/contracts";
 import { fetchModels } from "../services/questionQueue";
 import { studyRepository, type CorrectRates, type RecentQuestionTopic } from "../db/repository";
 import { questionUrl } from "../lib/questionNavigation";
+import { StudyFocusSettings } from "./StudyFocusSettings";
+import type { StudyFocus } from "../lib/studyFocus";
 
 type Props = {
   open: boolean;
@@ -14,6 +16,8 @@ type Props = {
   generationError?: string;
   selectedModel: string;
   theme: Theme;
+  studyFocus: StudyFocus;
+  onApplyFocus: (focus: StudyFocus) => Promise<void>;
   onClose: () => void;
   onOpenQuestion: (questionId: string, encounterId: string) => void;
   onSelectModel: (model: ModelOption["id"]) => Promise<void>;
@@ -36,7 +40,7 @@ function dimensionLabel(value: string): string {
   return dimensionLabels[value] ?? value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export function SettingsDialog({ open, selectedModel, theme, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
+export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApplyFocus, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError }: Props) {
   const [recentQuestions, setRecentQuestions] = useState<RecentQuestionTopic[] | null>(null);
   const [historyError, setHistoryError] = useState("");
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
@@ -77,10 +81,10 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onOpenQues
   if (!open) return null;
 
   let status = `Ready · ${ready}/${target}`;
-  if (offline && reviewMode) status = "Offline · Review";
+  if (offline && reviewMode && !studyFocus) status = "Offline · Review";
   else if (offline) status = `Offline · ${ready}/${target} ready`;
   else if (generating) status = `Generating · ${ready}/${target} ready`;
-  else if (generationError && reviewMode) status = "Generation paused · Review";
+  else if (generationError && reviewMode && !studyFocus) status = "Generation paused · Review";
   else if (generationError) status = `Generation paused · ${ready}/${target} ready`;
 
   return (
@@ -90,6 +94,7 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onOpenQues
           <h2 id="settings-title">Settings</h2>
           <button className="icon-button" type="button" aria-label="Close settings" onClick={onClose}>×</button>
         </div>
+        <StudyFocusSettings focus={studyFocus} onApply={onApplyFocus} />
         <fieldset>
           <legend>Question model</legend>
           {models.map((model) => (
@@ -143,7 +148,7 @@ export function SettingsDialog({ open, selectedModel, theme, onClose, onOpenQues
         {error && <p className="inline-error" role="alert">{error}</p>}
         <div className="settings-status status-copy" role="status" aria-live="polite">
           <span className={`status-dot ${generating ? "is-generating" : ""}`} aria-hidden="true" />
-          {status}
+          {studyFocus ? "Focused practice · " : ""}{status}
         </div>
         <section className="recent-question-settings" aria-labelledby="recent-question-title">
           <h3 id="recent-question-title">Recent question topics</h3>

@@ -7,11 +7,12 @@ import type { FollowUpMessage, ModelOption, OptionId, Theme } from "./lib/contra
 import { useQuestionNavigation } from "./hooks/useQuestionNavigation";
 import { activateTheme, getStoredTheme, normalizeTheme } from "./lib/theme";
 import { ApiError, QUEUE_TARGET, questionQueue, type QueueProgress } from "./services/questionQueue";
+import { sameStudyFocus, studyFocusLabel, type StudyFocus } from "./lib/studyFocus";
 
 const DEFAULT_PROGRESS: QueueProgress = { ready: 0, target: QUEUE_TARGET, generating: false };
 
 export default function App() {
-  const { displayed, status: navigationStatus, openQuestion, nextQuestion, resumeWhenReady, retryNavigation, continueStudying, updateEncounter } = useQuestionNavigation();
+  const { displayed, status: navigationStatus, openQuestion, nextQuestion, resumeWhenReady, retryNavigation, refreshStudySelection, continueStudying, updateEncounter } = useQuestionNavigation();
   const question = displayed?.question;
   const encounter = displayed?.encounter;
   const mode = encounter?.mode ?? "fresh";
@@ -24,6 +25,11 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelOption["id"]>("gemini-3.5-flash-lite");
   const [theme, setTheme] = useState<Theme>(getStoredTheme);
+  const [studyFocus, setStudyFocus] = useState<StudyFocus>(null);
+  const [focusNotice, setFocusNotice] = useState("");
+  const [focusError, setFocusError] = useState("");
+  const focusRef = useRef<StudyFocus>(null);
+  const fillRequestRef = useRef(0);
   const retryTimerRef = useRef<number | undefined>(undefined);
   const retryCountRef = useRef(0);
   const mountedRef = useRef(false);
@@ -40,19 +46,21 @@ export default function App() {
   }, [theme]);
 
   const startFill = useCallback(() => {
+    const request = ++fillRequestRef.current;
     if (!mountedRef.current || !navigator.onLine) return;
     window.clearTimeout(retryTimerRef.current);
     setGenerationError("");
+    const requestedFocus = focusRef.current;
     void questionQueue.fill((nextProgress) => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || !sameStudyFocus(nextProgress.focus, focusRef.current)) return;
       setProgress(nextProgress);
       if (nextProgress.ready > 0) resumeWhenReady();
     }).then(() => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || request !== fillRequestRef.current || !sameStudyFocus(requestedFocus, focusRef.current)) return;
       retryCountRef.current = 0;
       resumeWhenReady();
     }).catch((reason: unknown) => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || request !== fillRequestRef.current || !sameStudyFocus(requestedFocus, focusRef.current)) return;
       const message = reason instanceof ApiError
         ? reason.message
         : reason instanceof Error && reason.name === "AbortError"
@@ -72,15 +80,22 @@ export default function App() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [model, storedTheme, ready] = await Promise.all([
+      const [model, storedTheme, focus] = await Promise.all([
         studyRepository.getSetting<ModelOption["id"]>("selectedModel", "gemini-3.5-flash-lite"),
         studyRepository.getSetting<Theme>("theme", getStoredTheme()),
-        studyRepository.getFreshCount()
+        studyRepository.getStudyFocus()
+      ]);
+      if (!active) return;
+      const [ready, wasReset] = await Promise.all([
+        studyRepository.getFreshCount(focus), studyRepository.takeStudyFocusResetNotice()
       ]);
       if (!active) return;
       setSelectedModel(model);
       setTheme(normalizeTheme(storedTheme));
-      setProgress({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET && navigator.onLine });
+      focusRef.current = focus;
+      setStudyFocus(focus);
+      if (wasReset) setFocusNotice("Your saved focus is no longer available. Returned to mixed practice.");
+      setProgress({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET && navigator.onLine, focus });
       setInitialized(true);
       startFill();
     })().catch(() => {
@@ -128,8 +143,9 @@ export default function App() {
     if (!encounter?.completedAt || busy) return;
     await nextQuestion();
     try {
-      const ready = await studyRepository.getFreshCount();
-      if (mountedRef.current) setProgress((previous) => ({ ...previous, ready }));
+      const focus = focusRef.current;
+      const ready = await studyRepository.getFreshCount(focus);
+      if (mountedRef.current && sameStudyFocus(focus, focusRef.current)) setProgress((previous) => ({ ...previous, ready }));
     } catch {
       if (mountedRef.current) setGenerationError("Could not read the local queue.");
     }
@@ -175,6 +191,32 @@ export default function App() {
     await studyRepository.setSetting("theme", nextTheme);
   };
 
+  const handleFocusChange = async (focus: StudyFocus) => {
+    await studyRepository.setStudyFocus(focus);
+    focusRef.current = focus;
+    setStudyFocus(focus);
+    setFocusNotice("");
+    setFocusError("");
+    setGenerationError("");
+    retryCountRef.current = 0;
+    window.clearTimeout(retryTimerRef.current);
+    setProgress({ ready: 0, target: QUEUE_TARGET, generating: navigator.onLine, focus });
+    refreshStudySelection();
+    startFill();
+    try {
+      const ready = await studyRepository.getFreshCount(focus);
+      if (mountedRef.current && sameStudyFocus(focus, focusRef.current)) {
+        setProgress((previous) => ({ ...previous, ready, generating: previous.generating && ready < QUEUE_TARGET }));
+      }
+    } catch {
+      if (mountedRef.current && sameStudyFocus(focus, focusRef.current)) setGenerationError("Could not read the local queue.");
+    }
+  };
+
+  const returnToMixed = () => {
+    void handleFocusChange(null).catch(() => setFocusError("Could not save question focus. Try again."));
+  };
+
   const retry = () => {
     retryCountRef.current = 0;
     setOnline(navigator.onLine);
@@ -188,6 +230,17 @@ export default function App() {
         questionCompletedAt={encounter?.completedAt}
         onOpenSettings={() => setSettingsOpen(true)}
       />
+
+      {focusNotice && <p className="focus-notice" role="status">{focusNotice}</p>}
+      {focusError && <p className="focus-notice inline-error" role="alert">{focusError}</p>}
+      {initialized && (studyFocus || (question && !sameStudyFocus(question.generationFocus, studyFocus))) && (
+        <aside className="focus-banner" aria-label="Active question focus">
+          <p><strong>{studyFocusLabel(studyFocus)}</strong>
+            {question && !sameStudyFocus(question.generationFocus, studyFocus) && <small>Applies to the next question. Your current question stays open.</small>}
+          </p>
+          {studyFocus && question && <button className="text-button" type="button" onClick={returnToMixed}>Return to mixed practice</button>}
+        </aside>
+      )}
 
       {question && encounter ? (
         <QuestionView
@@ -209,6 +262,14 @@ export default function App() {
             <><h1>Could not load local study data</h1><p>Your browser’s storage could not be read. Try loading the question again.</p><button className="primary-button" type="button" onClick={retryNavigation}>Try again</button></>
           ) : navigationStatus === "loading" ? (
             <><div className="loader" aria-hidden="true" /><h1>Loading question</h1></>
+          ) : initialized && studyFocus ? (
+            <>
+              {online && progress.generating && <div className="loader" aria-hidden="true" />}
+              <h1>{!online ? "You’re offline" : generationError ? "Focused generation is paused" : "Preparing a focused question"}</h1>
+              <p>{!online ? "No fresh questions are ready for this focus. We’ll keep waiting for a connection, or you can return to mixed practice." : generationError || "Your next focused question will open when it’s ready. You can keep waiting or return to mixed practice."}</p>
+              <button className="primary-button" type="button" onClick={retry}>Try again</button>
+              <button className="text-button" type="button" onClick={returnToMixed}>Return to mixed practice</button>
+            </>
           ) : !initialized || progress.generating ? (
             <><div className="loader" aria-hidden="true" /><h1>Preparing your first question</h1><p>IWorld is generating a fresh clinical vignette.</p></>
           ) : (
@@ -226,6 +287,7 @@ export default function App() {
         open={settingsOpen}
         selectedModel={selectedModel}
         theme={theme}
+        studyFocus={studyFocus}
         onClose={() => setSettingsOpen(false)}
         onOpenQuestion={(questionId, encounterId) => {
           setSettingsOpen(false);
@@ -233,6 +295,7 @@ export default function App() {
         }}
         onSelectModel={handleModelChange}
         onSelectTheme={handleThemeChange}
+        onApplyFocus={handleFocusChange}
       />
     </div>
   );

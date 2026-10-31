@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { blueprintTagsSchema, type BlueprintTags } from "./blueprint.js";
+import { focusedStudySchema } from "./studyFocus.js";
 export type { BlueprintTags } from "./blueprint.js";
 
 export const optionIdSchema = z.enum(["A", "B", "C", "D", "E"]);
@@ -67,7 +68,9 @@ export const clinicalQuestionSchema = questionFieldsSchema.extend({
   curriculumVersion: z.string().min(1),
   crosswalkVersion: z.string().min(1),
   promptVersion: z.string().min(1),
-  enablingObjectiveId: z.string().min(1)
+  enablingObjectiveId: z.string().min(1),
+  // Local generation provenance; the generation HTTP response omits this field.
+  generationFocus: focusedStudySchema.optional()
 }).superRefine(validateOptions);
 export type ClinicalQuestion = z.infer<typeof clinicalQuestionSchema>;
 

@@ -1,14 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClinicalQuestion } from "../lib/contracts";
 import type { LocalStudyRepository } from "../db/repository";
 import { makeQuestion } from "../test/fixtures";
 import { QUEUE_TARGET, QuestionQueueService } from "./questionQueue";
+import { sameStudyFocus, type StudyFocus } from "../lib/studyFocus";
 
 function makeRepository(initial: ClinicalQuestion[] = []) {
   const questions = [...initial];
   return {
     questions,
-    getFreshCount: vi.fn(async () => questions.length),
+    getStudyFocus: vi.fn<() => Promise<StudyFocus>>(async () => null),
+    getFreshCount: vi.fn(async (focus: StudyFocus = null) => questions.filter((q) => sameStudyFocus(q.generationFocus, focus)).length),
     getQueuedTopicIds: vi.fn(async () => questions.map((question) => question.topicId)),
     getRecentCompletedQuestions: vi.fn(async () => []),
     getRecentGeneratedQuestions: vi.fn(async () => questions.slice(-5).reverse()),
@@ -21,6 +23,76 @@ function makeRepository(initial: ClinicalQuestion[] = []) {
 
 describe("QuestionQueueService", () => {
   beforeEach(() => vi.restoreAllMocks());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps an in-flight response in its original scope and fills the new focus", async () => {
+    const focused = { discipline: "medicine" as const, objectiveId: "14" };
+    let focus: StudyFocus = null;
+    const repository = makeRepository([
+      ...Array.from({ length: 9 }, () => makeQuestion()),
+      ...Array.from({ length: 9 }, () => makeQuestion({ generationFocus: focused }))
+    ]);
+    repository.getStudyFocus.mockImplementation(async () => focus);
+    let finishFirst!: () => void;
+    const firstResponse = new Promise<void>((resolve) => { finishFirst = resolve; });
+    let firstStarted!: () => void;
+    const started = new Promise<void>((resolve) => { firstStarted = resolve; });
+    const requests: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const input = JSON.parse(String(init.body));
+      requests.push(input);
+      if (requests.length === 1) { firstStarted(); await firstResponse; }
+      return new Response(JSON.stringify(makeQuestion({ topicId: input.topicId, blueprint: input.blueprint })), { status: 200 });
+    }));
+    const service = new QuestionQueueService(repository as unknown as LocalStudyRepository);
+    const progress = vi.fn();
+    const filling = service.fill(progress);
+    await started;
+    focus = focused;
+    const coalesced = service.fill();
+    expect(coalesced).toBe(filling);
+    finishFirst();
+    await filling;
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toMatchObject({ topicId: "mcc.14", blueprint: { discipline: "medicine", mccObjectiveIds: ["14"] } });
+    expect(requests[1]).not.toHaveProperty("generationFocus");
+    expect(repository.questions[18].generationFocus).toBeUndefined();
+    expect(repository.questions[19].generationFocus).toEqual(focused);
+    expect(await repository.getFreshCount()).toBe(10);
+    expect(await repository.getFreshCount(focused)).toBe(10);
+    expect(progress).toHaveBeenLastCalledWith({ ready: 10, target: 10, generating: false, focus: focused });
+  });
+
+  it("continues a newly selected scope when the previous request fails", async () => {
+    const focused = { discipline: "medicine" as const };
+    let focus: StudyFocus = focused;
+    const repository = makeRepository(Array.from({ length: 10 }, () => makeQuestion()));
+    repository.getStudyFocus.mockImplementation(async () => focus);
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      focus = null;
+      return new Response(JSON.stringify({ error: { code: "GENERATION_FAILED", message: "Old failure" } }), { status: 502 });
+    }));
+    await new QuestionQueueService(repository as unknown as LocalStudyRepository).fill();
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error", generationFocus: focused }));
+  });
+
+  it("uses the current focus after waiting for the browser generation lock", async () => {
+    const focus = { discipline: "pediatrics" as const };
+    const repository = makeRepository(Array.from({ length: 10 }, () => makeQuestion({ generationFocus: focus })));
+    let enterLock!: () => void;
+    const gate = new Promise<void>((resolve) => { enterLock = resolve; });
+    const request = vi.fn(async (_name: string, task: () => Promise<void>) => { await gate; await task(); });
+    vi.stubGlobal("navigator", { locks: { request } });
+    vi.stubGlobal("fetch", vi.fn());
+    const filling = new QuestionQueueService(repository as unknown as LocalStudyRepository).fill();
+    repository.getStudyFocus.mockResolvedValue(focus);
+    enterLock();
+    await filling;
+    expect(request).toHaveBeenCalledOnce();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(repository.getFreshCount).toHaveBeenCalledWith(focus);
+  });
 
   it("fills a new profile to exactly ten questions", async () => {
     const repository = makeRepository();

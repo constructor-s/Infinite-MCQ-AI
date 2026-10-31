@@ -3,10 +3,11 @@ import { selectBlueprint } from "../lib/blueprintSampler";
 import { blueprint, PROMPT_VERSION, sameBlueprint } from "../lib/blueprint";
 import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
 import { studyRepository, type LocalStudyRepository } from "../db/repository";
+import { focusCombinations, sameStudyFocus, type StudyFocus } from "../lib/studyFocus";
 
 export const QUEUE_TARGET = 10;
 
-export type QueueProgress = { ready: number; target: number; generating: boolean };
+export type QueueProgress = { ready: number; target: number; generating: boolean; focus?: StudyFocus };
 
 type ModelsResponse = { models: ModelOption[]; availabilityUnverified?: boolean };
 
@@ -38,12 +39,19 @@ export async function fetchModels(): Promise<ModelsResponse> {
 
 export class QuestionQueueService {
   private filling: Promise<void> | null = null;
+  private refillRequested = false;
 
   constructor(private repository: LocalStudyRepository = studyRepository) {}
 
   fill(onProgress?: (progress: QueueProgress) => void): Promise<void> {
+    this.refillRequested = true;
     if (this.filling) return this.filling;
-    this.filling = this.withBrowserLock(() => this.fillUnlocked(onProgress)).finally(() => {
+    this.filling = this.withBrowserLock(async () => {
+      do {
+        this.refillRequested = false;
+        await this.fillUnlocked(onProgress);
+      } while (this.refillRequested);
+    }).finally(() => {
       this.filling = null;
     });
     return this.filling;
@@ -58,14 +66,22 @@ export class QuestionQueueService {
   }
 
   private async fillUnlocked(onProgress?: (progress: QueueProgress) => void): Promise<void> {
-    let ready = await this.repository.getFreshCount();
-    onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET });
-    while (ready < QUEUE_TARGET) {
+    while (true) {
+      const focus = await this.repository.getStudyFocus();
+      const ready = await this.repository.getFreshCount(focus);
+      onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET, focus });
+      if (ready >= QUEUE_TARGET) {
+        if (sameStudyFocus(focus, await this.repository.getStudyFocus())) return;
+        continue;
+      }
       const model = await this.repository.getSetting("selectedModel", "gemini-3.5-flash-lite");
       const recentQuestions = await this.repository.getRecentGeneratedQuestions(5);
-      const context = await this.repository.getSamplingContext();
-      const selection = selectBlueprint(context);
-      const metadata = { blueprint: selection.blueprint, blueprintVersion: blueprint.version, curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION, enablingObjectiveId: selection.enablingObjectiveId };
+      const context = await this.repository.getSamplingContext(focus);
+      // A settings change may have happened while IndexedDB reads were pending.
+      if (!sameStudyFocus(focus, await this.repository.getStudyFocus())) continue;
+      const selection = selectBlueprint(context, Math.random, Date.now(), focusCombinations(focus));
+      const metadata = { blueprint: selection.blueprint, blueprintVersion: blueprint.version, curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION, enablingObjectiveId: selection.enablingObjectiveId,
+        ...(focus ? { generationFocus: focus } : {}) };
       try {
         const response = await fetchWithTimeout("/api/questions/generate", {
           method: "POST",
@@ -78,7 +94,7 @@ export class QuestionQueueService {
         });
         const body = await response.json();
         if (!response.ok) throw new ApiError(body.error?.code ?? "GENERATION_FAILED", body.error?.message ?? "Generation failed", response.status);
-        const question: ClinicalQuestion = clinicalQuestionSchema.parse(body);
+        const question: ClinicalQuestion = clinicalQuestionSchema.parse({ ...body, generationFocus: focus ?? undefined });
         if (question.topicId !== selection.topicId || !sameBlueprint(question.blueprint, selection.blueprint)) {
           throw new ApiError("BLUEPRINT_MISMATCH", "Generated question does not match its selected blueprint", 502);
         }
@@ -91,12 +107,10 @@ export class QuestionQueueService {
         } catch {
           // Preserve the generation error if diagnostic persistence is unavailable.
         }
-        throw error;
+        // A failure in an old scope must not pause the newly selected focus.
+        if (sameStudyFocus(focus, await this.repository.getStudyFocus())) throw error;
       }
-      ready = await this.repository.getFreshCount();
-      onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET });
     }
-    onProgress?.({ ready, target: QUEUE_TARGET, generating: false });
   }
 }
 

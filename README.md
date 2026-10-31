@@ -64,6 +64,14 @@ npm run build
 
 Questions, attempts, the queue, and the selected model remain in that browser's IndexedDB. Clearing site data removes them.
 
+## Focused practice
+
+In Settings, **Question focus** lets you switch from mixed practice to one of the six disciplines and optionally choose a searchable MCC objective. Click **Apply focus** to save it. The current question and answers stay open; the next question uses the selected focus. Focus persists in this browser until you select **Return to mixed practice**.
+
+Each focus has its own fresh-question queue, filled to ten while active. Switching preserves inactive queues for later. Focused practice waits for fresh questions instead of automatically reviewing old ones; if none are ready, you can wait, retry generation, or return to mixed practice. Saved question links and Back/Forward continue to restore their original attempts regardless of focus.
+
+Blueprint coverage is tracked separately for mixed practice and each focus, so drills do not cause compensating changes to the mixed distribution. Focused selections retain eligible activity, care and cognitive-task combinations; a restricted pool may not support the full blueprint distribution. Objective performance history remains shared, and first attempts on fresh focused questions contribute to correct rates. Invalid or obsolete saved focus selections reset to mixed practice with a notice. No free-text steering or additional subspecialty taxonomy is used.
+
 ## Question links and history
 
 Each displayed question has a stable `/questions/<uuid>` address. Back and Forward restore the attempt shown on that history entry, including saved answers and follow-up conversations. Refresh uses that same attempt when its history state is available; bookmarks, copied links, and new tabs open the question's latest saved attempt. Opening an existing attempt does not count as another attempt.

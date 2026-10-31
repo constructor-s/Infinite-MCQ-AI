@@ -70,11 +70,13 @@ export function useQuestionNavigation() {
             await studyRepository.removeFromQueue(completed.question.id);
             if (!active()) return;
           }
-          const fresh = await studyRepository.getFreshQuestions();
+          const focus = await studyRepository.getStudyFocus();
+          if (!active()) return;
+          const fresh = await studyRepository.getFreshQuestions(focus);
           if (!active()) return;
           let question: ClinicalQuestion | undefined = fresh[0];
           const mode = question ? "fresh" : "review";
-          if (!question) {
+          if (!question && !focus) {
             question = await studyRepository.getReviewQuestion(completed?.question.id);
             if (!active()) return;
           }
@@ -136,6 +138,15 @@ export function useQuestionNavigation() {
     if (requestRef.current) void navigate(requestRef.current);
   }, [navigate]);
 
+  const refreshStudySelection = useCallback(() => {
+    // Changing focus never replaces a displayed question or a saved-link load.
+    if (currentRef.current) return;
+    const request = requestRef.current;
+    if (request?.kind === "next" || (request?.kind === "location" && parseQuestionRoute(request.pathname).kind === "home")) {
+      void navigate(request);
+    }
+  }, [navigate]);
+
   const continueStudying = useCallback(() => {
     history.replaceState({}, "", "/");
     void navigate({ kind: "next", historyAction: "replace" });
@@ -149,5 +160,5 @@ export function useQuestionNavigation() {
     setDisplayed(updated);
   }, []);
 
-  return { displayed, status, openQuestion, nextQuestion, resumeWhenReady, retryNavigation, continueStudying, updateEncounter };
+  return { displayed, status, openQuestion, nextQuestion, resumeWhenReady, retryNavigation, refreshStudySelection, continueStudying, updateEncounter };
 }

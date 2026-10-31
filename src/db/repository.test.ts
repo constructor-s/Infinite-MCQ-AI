@@ -15,6 +15,43 @@ describe("LocalStudyRepository", () => {
 
   afterEach(async () => database.delete());
 
+  it("persists valid focus and resets invalid settings with a one-time notice", async () => {
+    expect(await repository.getStudyFocus()).toBeNull();
+    const focus = { discipline: "medicine" as const, objectiveId: "14" };
+    await repository.setStudyFocus(focus);
+    expect(await new LocalStudyRepository(database).getStudyFocus()).toEqual(focus);
+    await expect(repository.setStudyFocus({ discipline: "medicine", objectiveId: "3-1" })).rejects.toThrow();
+    await repository.setSetting("studyFocus", { discipline: "medicine", objectiveId: "removed" });
+    expect(await repository.getStudyFocus()).toBeNull();
+    expect(await database.settings.get("studyFocus")).toEqual({ key: "studyFocus", value: null });
+    expect(await repository.takeStudyFocusResetNotice()).toBe(true);
+    expect(await repository.takeStudyFocusResetNotice()).toBe(false);
+  });
+
+  it("preserves inactive queues and filters coverage before taking its rolling window", async () => {
+    const focus = { discipline: "medicine" as const, objectiveId: "14" };
+    const otherFocus = { discipline: "medicine" as const };
+    const mixed = makeQuestion({ generatedAt: "2026-01-01T00:00:00Z" });
+    const focused = Array.from({ length: 201 }, (_, index) => makeQuestion({
+      generationFocus: focus, generatedAt: new Date(Date.UTC(2026, 0, 2, 0, index)).toISOString()
+    }));
+    const other = makeQuestion({ generationFocus: otherFocus });
+    await repository.enqueue(mixed);
+    await repository.enqueue(focused[0]);
+    await repository.enqueue(other);
+    await database.questions.bulkPut(focused);
+    expect((await repository.getFreshQuestions()).map((q) => q.id)).toEqual([mixed.id]);
+    expect((await repository.getFreshQuestions(focus)).map((q) => q.id)).toEqual([focused[0].id]);
+    expect(await repository.getFreshCount(otherFocus)).toBe(1);
+    expect((await repository.getSamplingContext()).questions.map((q) => q.id)).toEqual([mixed.id]);
+    expect((await repository.getSamplingContext(focus)).questions.map((q) => q.id)).toEqual(focused.slice(1).map((q) => q.id));
+    const encounter = await repository.beginEncounter(focused[0], "fresh");
+    await repository.recordSelection(encounter.id, "B", false);
+    expect((await repository.getSamplingContext()).objectiveStats["14"]).toMatchObject({ attempts: 1, errors: 1 });
+    expect((await repository.getSamplingContext(focus)).objectiveStats["14"]).toMatchObject({ attempts: 1, errors: 1 });
+    expect((await repository.getCorrectRates()).recent20).toEqual({ correct: 0, total: 1 });
+  });
+
   it("restores saved encounters without changing queue, timestamps, or statistics", async () => {
     const question = makeQuestion();
     await repository.enqueue(question);
