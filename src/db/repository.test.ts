@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import Dexie from "dexie";
 import { IWorldDatabase } from "./database";
 import { LocalStudyRepository } from "./repository";
 import { makeQuestion } from "../test/fixtures";
@@ -14,6 +15,48 @@ describe("LocalStudyRepository", () => {
   });
 
   afterEach(async () => database.delete());
+
+  it("persists one feedback vote per question, restores it and joins provenance", async () => {
+    const question = makeQuestion();
+    await repository.enqueue(question);
+    const encounter = await repository.beginEncounter(question, "fresh");
+    await expect(repository.setQuestionFeedback(question.id, encounter.id, "up")).rejects.toThrow(/completed/);
+    await repository.revealAnswer(encounter.id);
+    await repository.setQuestionFeedback(question.id, encounter.id, "up");
+    const first = await new LocalStudyRepository(database).getQuestionFeedback(question.id);
+    expect(first?.rating).toBe("up");
+    await repository.setQuestionFeedback(question.id, encounter.id, "down");
+    expect(await database.questionFeedback.count()).toBe(1);
+    expect(await repository.getQuestionFeedback(question.id)).toMatchObject({ rating: "down", createdAt: first?.createdAt });
+    const [review] = await repository.getQuestionFeedbackReviewData();
+    expect(review.question?.promptVersion).toBe(question.promptVersion);
+    expect(review.encounter?.revealedAnswer).toBe(true);
+    await expect(repository.setQuestionFeedback("other", encounter.id, "down")).rejects.toThrow();
+    await repository.setQuestionFeedback(question.id, encounter.id, null);
+    expect(await repository.getQuestionFeedback(question.id)).toBeUndefined();
+  });
+
+  it("adds feedback storage while preserving a version-one study database", async () => {
+    const name = `migration-${crypto.randomUUID()}`;
+    const legacy = new Dexie(name);
+    legacy.version(1).stores({
+      questions: "id, topicId, generatedAt, vignetteSignature", queueItems: "id, &questionId, topicId, createdAt",
+      encounters: "id, questionId, topicId, mode, startedAt, completedAt, [questionId+mode]",
+      settings: "key", generationEvents: "id, timestamp, topicId, outcome"
+    });
+    const question = makeQuestion();
+    await legacy.table("questions").put(question);
+    await legacy.table("settings").put({ key: "selectedModel", value: "gemini-3.8-flash" });
+    await legacy.table("queueItems").put({ id: "queued", questionId: question.id, topicId: question.topicId, createdAt: new Date().toISOString() });
+    legacy.close();
+    const upgraded = new IWorldDatabase(name);
+    try {
+      expect(await upgraded.questions.get(question.id)).toEqual(question);
+      expect((await upgraded.settings.get("selectedModel"))?.value).toBe("gemini-3.8-flash");
+      expect(await upgraded.queueItems.count()).toBe(1);
+      expect(await upgraded.questionFeedback.count()).toBe(0);
+    } finally { await upgraded.delete(); }
+  });
 
   it("persists valid focus and resets invalid settings with a one-time notice", async () => {
     expect(await repository.getStudyFocus()).toBeNull();

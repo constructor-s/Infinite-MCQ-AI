@@ -69,6 +69,23 @@ describe("question navigation", () => {
     vi.unstubAllGlobals();
   });
 
+  it("feedback keyboard activation does not advance the question", async () => {
+    const first = makeQuestion();
+    const second = makeQuestion({ stem: "Which second treatment is most appropriate?" });
+    const encounter = await complete(first);
+    await enqueue(second);
+    history.replaceState({ iworldEncounterId: encounter.id }, "", questionUrl(first.id));
+    render(<App />);
+    const thumb = await screen.findByRole("button", { name: "Good question" });
+    await waitFor(() => expect(thumb).toBeEnabled());
+    thumb.focus();
+    fireEvent.keyDown(thumb, { key: "Enter" });
+    fireEvent.click(thumb);
+    await waitFor(() => expect(thumb).toHaveAttribute("aria-pressed", "true"));
+    expect(screen.getByRole("heading", { name: first.stem })).toBeInTheDocument();
+    expect((await studyRepository.getQuestionFeedback(first.id))?.rating).toBe("up");
+  });
+
   it("applies focus to Next, preserves answers and saved history, and returns to the mixed queue", async () => {
     const focus = { discipline: "medicine" as const, objectiveId: "14" };
     const first = makeQuestion({ stem: "Which mixed treatment is most appropriate?" });

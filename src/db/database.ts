@@ -12,6 +12,14 @@ export type QueueItem = {
 
 export type Setting = { key: string; value: unknown };
 
+export type QuestionFeedback = {
+  questionId: string;
+  encounterId: string;
+  rating: "up" | "down";
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type GenerationEvent = {
   id: string;
   timestamp: string;
@@ -34,6 +42,7 @@ export class IWorldDatabase extends Dexie {
   encounters!: EntityTable<Encounter, "id">;
   settings!: EntityTable<Setting, "key">;
   generationEvents!: EntityTable<GenerationEvent, "id">;
+  questionFeedback!: EntityTable<QuestionFeedback, "questionId">;
 
   constructor(name = "iworld") {
     super(name);
@@ -44,6 +53,8 @@ export class IWorldDatabase extends Dexie {
       settings: "key",
       generationEvents: "id, timestamp, topicId, outcome"
     });
+    // Additive migration: keep every existing question, encounter, queue and setting.
+    this.version(2).stores({ questionFeedback: "questionId, rating, updatedAt" });
   }
 }
 

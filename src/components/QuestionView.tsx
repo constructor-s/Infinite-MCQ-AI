@@ -1,5 +1,6 @@
 import type { ClinicalQuestion, Encounter, FollowUpMessage, OptionId } from "../lib/contracts";
 import { QuestionFollowUp } from "./QuestionFollowUp";
+import { QuestionFeedback } from "./QuestionFeedback";
 
 type Props = {
   question: ClinicalQuestion;
@@ -79,6 +80,7 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
                 ))}
               </div>
             </details>
+            <QuestionFeedback questionId={question.id} encounterId={encounter.id} />
             <QuestionFollowUp
               question={question}
               messages={encounter.followUpMessages ?? []}

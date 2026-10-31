@@ -172,6 +172,8 @@ export default function App() {
         const option = question.options[Number(event.key) - 1];
         if (option) void handleSelect(option.id);
       }
+      // Let native controls (including optional feedback) own their Enter key.
+      if (event.key === "Enter" && target instanceof HTMLElement && target.closest("button, a, summary")) return;
       if (event.key === "Enter" && encounter?.completedAt) void handleNext();
     };
     window.addEventListener("keydown", onKeyDown);

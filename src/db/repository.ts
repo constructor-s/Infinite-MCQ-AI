@@ -1,4 +1,4 @@
-import { db, type GenerationEvent, type IWorldDatabase } from "./database";
+import { db, type GenerationEvent, type IWorldDatabase, type QuestionFeedback } from "./database";
 import { clinicalQuestionSchema, type ClinicalQuestion, type Encounter, type EncounterMode, type FollowUpMessage, type OptionId } from "../lib/contracts";
 import { createLocalId } from "../lib/createLocalId";
 import { blueprint, blueprintTagsSchema } from "../lib/blueprint";
@@ -12,6 +12,38 @@ export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate; last
 
 export class LocalStudyRepository {
   constructor(private database: IWorldDatabase = db) {}
+
+  async getQuestionFeedback(questionId: string): Promise<QuestionFeedback | undefined> {
+    return this.database.questionFeedback.get(questionId);
+  }
+
+  async setQuestionFeedback(questionId: string, encounterId: string, rating: QuestionFeedback["rating"] | null): Promise<void> {
+    await this.database.transaction("rw", this.database.questionFeedback, this.database.encounters, this.database.questions, async () => {
+      const encounter = await this.database.encounters.get(encounterId);
+      if (!encounter?.completedAt || encounter.questionId !== questionId || !await this.database.questions.get(questionId)) {
+        throw new Error("Feedback requires a completed encounter for this question");
+      }
+      if (rating === null) {
+        await this.database.questionFeedback.delete(questionId);
+        return;
+      }
+      const previous = await this.database.questionFeedback.get(questionId);
+      const now = new Date().toISOString();
+      await this.database.questionFeedback.put({ questionId, encounterId, rating, createdAt: previous?.createdAt ?? now, updatedAt: now });
+    });
+  }
+
+  /** Local review data, including existing model/prompt provenance. No upload. */
+  async getQuestionFeedbackReviewData() {
+    return this.database.transaction("r", this.database.questionFeedback, this.database.questions, this.database.encounters, async () => {
+      const feedback = await this.database.questionFeedback.orderBy("updatedAt").reverse().toArray();
+      return Promise.all(feedback.map(async (vote) => ({
+        feedback: vote,
+        question: await this.database.questions.get(vote.questionId),
+        encounter: await this.database.encounters.get(vote.encounterId)
+      })));
+    });
+  }
 
   async getQuestionById(questionId: string): Promise<ClinicalQuestion | undefined> {
     const question = await this.database.questions.get(questionId);

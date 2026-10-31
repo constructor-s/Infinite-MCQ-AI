@@ -81,6 +81,14 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .question-shell { width: min(100%, 760px); margin: 0 auto; padding: 28px 22px 64px; }
 .question-card { padding: 0; background: var(--page); }
+.question-feedback { display: flex; align-items: center; gap: 4px; margin: 12px 0; }
+.feedback-thumb { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--faint); cursor: pointer; }
+.feedback-thumb:hover, .feedback-thumb[aria-pressed="true"] { background: var(--hover); color: var(--text); }
+.feedback-thumb[aria-pressed="true"] { border-color: var(--soft-border); }
+.feedback-thumb:focus-visible { outline: 2px solid var(--strong-border); outline-offset: 2px; }
+.feedback-thumb:disabled { cursor: default; opacity: .55; }
+.feedback-error { color: var(--muted); font-size: 12px; }
+@media (pointer: coarse) { .feedback-thumb { width: 44px; height: 44px; } }
 .review-label { margin: 0 0 18px; color: var(--muted); font-size: 13px; font-weight: 700; text-transform: uppercase; }
 .vignette { color: var(--text); font-size: 17px; line-height: 1.55; }
 .narrative { margin: 0 0 22px; }

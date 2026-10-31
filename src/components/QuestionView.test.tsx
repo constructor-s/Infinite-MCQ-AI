@@ -24,6 +24,7 @@ describe("QuestionView", () => {
     expect(screen.queryByText(question.topicTitle)).not.toBeInTheDocument();
     expect(screen.getByText(question.vignette)).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Good question" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^[A-E]/ })).toHaveLength(5);
   });
 
@@ -40,6 +41,7 @@ describe("QuestionView", () => {
     const onNext = vi.fn();
     render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["A"], eventuallyCorrect: true, completedAt: new Date().toISOString() })} mode="fresh" busy={false} {...viewHandlers()} onNext={onNext} />);
     expect(screen.getByText("Answer: A")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Good question" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Ask about this question" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next question" }));
     expect(onNext).toHaveBeenCalledOnce();
