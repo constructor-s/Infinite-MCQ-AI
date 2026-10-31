@@ -29,8 +29,8 @@ describe("QuestionQueueService", () => {
     const focused = { discipline: "medicine" as const, objectiveId: "14" };
     let focus: StudyFocus = null;
     const repository = makeRepository([
-      ...Array.from({ length: 9 }, () => makeQuestion()),
-      ...Array.from({ length: 9 }, () => makeQuestion({ generationFocus: focused }))
+      ...Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()),
+      ...Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion({ generationFocus: focused }))
     ]);
     repository.getStudyFocus.mockImplementation(async () => focus);
     let finishFirst!: () => void;
@@ -56,17 +56,17 @@ describe("QuestionQueueService", () => {
     expect(requests).toHaveLength(2);
     expect(requests[1]).toMatchObject({ topicId: "mcc.14", blueprint: { discipline: "medicine", mccObjectiveIds: ["14"] } });
     expect(requests[1]).not.toHaveProperty("generationFocus");
-    expect(repository.questions[18].generationFocus).toBeUndefined();
-    expect(repository.questions[19].generationFocus).toEqual(focused);
-    expect(await repository.getFreshCount()).toBe(10);
-    expect(await repository.getFreshCount(focused)).toBe(10);
-    expect(progress).toHaveBeenLastCalledWith({ ready: 10, target: 10, generating: false, focus: focused });
+    expect(repository.questions[2 * (QUEUE_TARGET - 1)].generationFocus).toBeUndefined();
+    expect(repository.questions[2 * (QUEUE_TARGET - 1) + 1].generationFocus).toEqual(focused);
+    expect(await repository.getFreshCount()).toBe(QUEUE_TARGET);
+    expect(await repository.getFreshCount(focused)).toBe(QUEUE_TARGET);
+    expect(progress).toHaveBeenLastCalledWith({ ready: QUEUE_TARGET, target: QUEUE_TARGET, generating: false, focus: focused });
   });
 
   it("continues a newly selected scope when the previous request fails", async () => {
     const focused = { discipline: "medicine" as const };
     let focus: StudyFocus = focused;
-    const repository = makeRepository(Array.from({ length: 10 }, () => makeQuestion()));
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET }, () => makeQuestion()));
     repository.getStudyFocus.mockImplementation(async () => focus);
     vi.stubGlobal("fetch", vi.fn(async () => {
       focus = null;
@@ -79,7 +79,7 @@ describe("QuestionQueueService", () => {
 
   it("uses the current focus after waiting for the browser generation lock", async () => {
     const focus = { discipline: "pediatrics" as const };
-    const repository = makeRepository(Array.from({ length: 10 }, () => makeQuestion({ generationFocus: focus })));
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET }, () => makeQuestion({ generationFocus: focus })));
     let enterLock!: () => void;
     const gate = new Promise<void>((resolve) => { enterLock = resolve; });
     const request = vi.fn(async (_name: string, task: () => Promise<void>) => { await gate; await task(); });
@@ -94,7 +94,7 @@ describe("QuestionQueueService", () => {
     expect(repository.getFreshCount).toHaveBeenCalledWith(focus);
   });
 
-  it("fills a new profile to exactly ten questions", async () => {
+  it("fills a new profile to exactly three questions", async () => {
     const repository = makeRepository();
     let count = 0;
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
@@ -112,12 +112,11 @@ describe("QuestionQueueService", () => {
     expect(repository.questions).toHaveLength(QUEUE_TARGET);
     expect(fetch).toHaveBeenCalledTimes(QUEUE_TARGET);
     expect(repository.getSamplingContext).toHaveBeenCalledTimes(QUEUE_TARGET);
-    expect(new Set(repository.questions.map((q) => q.blueprint.physicianActivity)).size).toBeGreaterThan(1);
     expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "success", blueprint: expect.any(Object), promptVersion: expect.any(String), curriculumVersion: expect.any(String) }));
   });
 
   it("shares concurrent fill calls and only tops up the deficit", async () => {
-    const repository = makeRepository(Array.from({ length: 8 }, (_, index) => makeQuestion({ vignetteSignature: `existing-${index}` })));
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 2 }, (_, index) => makeQuestion({ vignetteSignature: `existing-${index}` })));
     let count = 0;
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
       count += 1;
@@ -126,23 +125,23 @@ describe("QuestionQueueService", () => {
     }));
     const service = new QuestionQueueService(repository as unknown as LocalStudyRepository);
     await Promise.all([service.fill(), service.fill()]);
-    expect(repository.questions).toHaveLength(10);
+    expect(repository.questions).toHaveLength(QUEUE_TARGET);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("does not persist or count a failed generation and can resume filling", async () => {
-    const repository = makeRepository(Array.from({ length: 9 }, () => makeQuestion()));
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()));
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "GENERATION_FAILED", message: "Unavailable" } }), { status: 502 })));
     const service = new QuestionQueueService(repository as unknown as LocalStudyRepository);
     await expect(service.fill()).rejects.toThrow("Unavailable");
-    expect(repository.questions).toHaveLength(9);
+    expect(repository.questions).toHaveLength(QUEUE_TARGET - 1);
     expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error", blueprint: expect.any(Object) }));
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
       const input = JSON.parse(String(init.body));
       return new Response(JSON.stringify(makeQuestion({ topicId: input.topicId, blueprint: input.blueprint })), { status: 200 });
     }));
     await service.fill();
-    expect(repository.questions).toHaveLength(10);
+    expect(repository.questions).toHaveLength(QUEUE_TARGET);
   });
 
   it("rejects a successful HTTP response carrying the wrong assignment", async () => {

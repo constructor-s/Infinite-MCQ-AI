@@ -10,7 +10,7 @@ export async function fetch(request: Request): Promise<Response> {
   }
   try {
     const body = await request.json();
-    const question = await generateQuestion(body);
+    const question = await generateQuestion(body, undefined, { signal: request.signal });
     console.info(`[question-generation] request completed status=200 durationMs=${Date.now() - startedAt}`);
     return Response.json(question, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

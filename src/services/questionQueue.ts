@@ -5,7 +5,7 @@ import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
 import { studyRepository, type LocalStudyRepository } from "../db/repository";
 import { focusCombinations, sameStudyFocus, type StudyFocus } from "../lib/studyFocus";
 
-export const QUEUE_TARGET = 10;
+export const QUEUE_TARGET = 3;
 
 export type QueueProgress = { ready: number; target: number; generating: boolean; focus?: StudyFocus };
 
@@ -17,10 +17,10 @@ export class ApiError extends Error {
   }
 }
 
-// Allow for a serverless cold start and one malformed-output retry at Gemini.
+// Allow for background generation, two reviews and bounded revisions.
 // Keep this slightly longer than the function's Vercel execution window so a
 // server response (including a timeout response) wins over a browser abort.
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 65_000): Promise<Response> {
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 305_000): Promise<Response> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   try {

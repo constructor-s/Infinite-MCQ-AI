@@ -2,16 +2,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { clinicalQuestionSchema, generateQuestionRequestSchema, generatedQuestionSchema, type GenerateQuestionRequest, type GeneratedQuestion } from "../lib/contracts";
 import { PROMPT_VERSION } from "../lib/blueprint";
 import { makeQuestion } from "../test/fixtures";
-import { generateQuestion, GenerationError, makePrompt, validateQuestionQuality } from "./questionGeneration";
+import { generateQuestion, GenerationError, makePrompt, validateQuestionQuality, GENERATION_DEADLINE_MS } from "./questionGeneration";
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion";
 import { eligibility } from "../data/curriculum";
 import { sourceObjectivesById } from "./objectives";
 import { assignmentIsEligible, alignmentIssue } from "./questionPrompts";
+import { clinicalReviewSchema, editorialReviewSchema } from "./questionReview";
 import exemplars from "../../curriculum/exemplars.json";
 
 const { generateContent } = vi.hoisted(() => ({ generateContent: vi.fn() }));
-vi.mock("@google/genai", () => ({ GoogleGenAI: class { models = { generateContent }; } }));
-afterEach(() => { generateContent.mockReset(); vi.restoreAllMocks(); });
+vi.mock("@google/genai", async () => ({ ...await vi.importActual("@google/genai"), GoogleGenAI: class { models = { generateContent }; } }));
+afterEach(() => { generateContent.mockReset(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 function request(): GenerateQuestionRequest {
   const entry = eligibility.find((e) => e.objectiveId === "14" && e.physicianActivity === "management" && e.careDimension === "acute")!;
@@ -24,6 +25,32 @@ function generated(): GeneratedQuestion {
   return question;
 }
 
+function reviewProvider(candidates: GeneratedQuestion[], failRounds = 0) {
+  let round = 0;
+  generateContent.mockImplementation(async (arg) => {
+    const prompt = JSON.parse(arg.contents);
+    if (!prompt.question) {
+      round += 1;
+      return { text: JSON.stringify(candidates[Math.min(round - 1, candidates.length - 1)]) };
+    }
+    const pass = { status: "pass", evidence: "The supplied case establishes this criterion.", correction: "" };
+    if (prompt.annotatedExamples) {
+      const criteria = Object.fromEntries(Object.keys(editorialReviewSchema.shape.criteria.shape).map((key) => [key, pass]));
+      if (round <= failRounds) criteria.noAnswerGiveaways = { status: "fail", evidence: "One answer bundles uniquely detailed care.", correction: "Compare equivalent dispositions." };
+      return { text: JSON.stringify({ criteria, polish: { status: "fail", evidence: "One sentence could be shorter.", correction: "Optional shortening." } }) };
+    }
+    const candidate = candidates[Math.min(round - 1, candidates.length - 1)];
+    const answerText = candidate.options.find((o) => o.id === candidate.correctOptionId)!.text;
+    const answerId = prompt.question.options.find((o: { text: string }) => o.text === answerText).id;
+    return { text: JSON.stringify({
+      answerId, strongestDistractorId: prompt.question.options.find((o: { id: string }) => o.id !== answerId).id,
+      distractorAppeal: "The alternative would fit a related presentation.", decisiveCaseFact: candidate.vignette,
+      verificationCategory: "none", references: [],
+      criteria: Object.fromEntries(Object.keys(clinicalReviewSchema.shape.criteria.shape).map((key) => [key, pass]))
+    }) };
+  });
+}
+
 describe("question generation safeguards", () => {
   it("grounds the prompt in the exact eligible task and enabling objective", () => {
     const entry = eligibility.find((e) => e.objectiveId === "14" && e.physicianActivity === "management")!;
@@ -31,14 +58,14 @@ describe("question generation safeguards", () => {
     const prompt = JSON.parse(makePrompt(input));
     expect(prompt.assignment).toEqual(input.blueprint);
     expect(prompt.objective.enablingObjective).toEqual(sourceObjectivesById.get("14")!.enablingObjectives.find((e) => e.id === input.enablingObjectiveId));
-    expect(prompt.originalStyleExample).toHaveProperty("bestAnswer");
-    expect(makePrompt(input, 0)).not.toEqual(makePrompt(input, 1));
+    expect(prompt).not.toHaveProperty("originalStyleExample");
+    expect(prompt.formatInstruction).toMatch(/schema/);
     expect(() => makePrompt({ ...input, blueprint: { ...input.blueprint, mccObjectiveIds: ["not-an-objective"] } })).toThrow(/eligible/i);
   });
 
   it("sends the MCCQE level, strong distractor and review instructions to the provider", async () => {
     const input = request();
-    generateContent.mockResolvedValue({ text: JSON.stringify({ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }) });
+    reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }]);
     const result = await generateQuestion(input, "test-key");
     const prompt = JSON.parse(generateContent.mock.calls[0][0].contents);
     expect(prompt).not.toHaveProperty("difficulty");
@@ -153,32 +180,95 @@ describe("question generation safeguards", () => {
     expect(generateContent).not.toHaveBeenCalled();
   });
 
-  it("retries once with concrete feedback and preserves the assignment", async () => {
-    const input = request();
-    const response = { ...generated(), blueprint: input.blueprint };
-    // Use a broadly valid management stem for this selected management task.
-    response.stem = "Which treatment is most appropriate?";
-    generateContent.mockResolvedValueOnce({ text: JSON.stringify({ ...response, blueprint: { ...input.blueprint, discipline: "surgery" } }) })
-      .mockResolvedValueOnce({ text: JSON.stringify(response) });
-    const result = await generateQuestion(input, "test-key");
-    expect(result.blueprint).toEqual(input.blueprint);
-    expect(result.schemaVersion).toBe(2);
-    expect(generateContent).toHaveBeenCalledTimes(2);
-    const secondPrompt = JSON.parse(generateContent.mock.calls[1][0].contents);
-    expect(secondPrompt.correctionRequired).toMatch(/exact assigned blueprint/);
-    expect(secondPrompt.assignment).toEqual(input.blueprint);
-  });
-
-  it("makes one provider call for valid output and at most two for invalid output", async () => {
+  it("repairs the actual structurally invalid draft and preserves the assignment", async () => {
     const input = request();
     const response = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    generateContent.mockResolvedValue({ text: JSON.stringify(response) });
+    reviewProvider([{ ...response, blueprint: { ...input.blueprint, discipline: "surgery" } }, response]);
+    const result = await generateQuestion(input, "test-key");
+    expect(result.blueprint).toEqual(input.blueprint);
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    const second = JSON.parse(generateContent.mock.calls[1][0].contents);
+    expect(second.correctionRequired.structuralErrors).toMatch(/exact assigned blueprint/);
+    expect(second.previousDraft.blueprint.discipline).toBe("surgery");
+  });
+
+  it("uses three calls for accepted output and at most three candidates for structural errors", async () => {
+    const input = request();
+    const response = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([response]);
     await generateQuestion(input, "test-key");
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(3);
     generateContent.mockClear();
-    generateContent.mockResolvedValue({ text: JSON.stringify({ ...response, blueprint: { ...input.blueprint, discipline: "surgery" } }) });
+    reviewProvider([{ ...response, blueprint: { ...input.blueprint, discipline: "surgery" } }]);
     await expect(generateQuestion(input, "test-key")).rejects.toThrow(/exact assigned/);
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps the blind reviewer free of keys, teaching and examples, and grounds only that reviewer", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([candidate]);
+    const events: unknown[] = [];
+    const result = await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
+    const clinicalCall = generateContent.mock.calls.find(([arg]) => JSON.parse(arg.contents).question?.options?.[0]?.hint === undefined && JSON.parse(arg.contents).question)!;
+    const clinical = JSON.parse(clinicalCall[0].contents);
+    expect(Object.keys(clinical.question).sort()).toEqual(["options", "stem", "vignette"]);
+    expect(clinical).not.toHaveProperty("annotatedExamples");
+    expect(clinical.question.options.every((o: object) => Object.keys(o).sort().join() === "id,text")).toBe(true);
+    expect(clinicalCall[0].config.tools).toEqual([{ googleSearch: {} }]);
+    const editorialCall = generateContent.mock.calls.find(([arg]) => JSON.parse(arg.contents).annotatedExamples)!;
+    expect(editorialCall[0].config.tools).toBeUndefined();
+    expect(events).toHaveLength(4);
+    expect(result).not.toHaveProperty("reviews");
+    expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("temperature");
+  });
+
+  it("revises weak distractors using both reviews and rechecks fresh output", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([candidate], 1);
+    await generateQuestion(input, "test-key");
+    expect(generateContent).toHaveBeenCalledTimes(6);
+    const revision = JSON.parse(generateContent.mock.calls[3][0].contents);
+    expect(revision.previousDraft).toEqual(generatedQuestionSchema.parse(candidate));
+    expect(revision.correctionRequired.issues).toContain("editorial.noAnswerGiveaways");
+    expect(revision.correctionRequired.clinical.answerId).toBe(candidate.correctOptionId);
+    expect(JSON.parse(generateContent.mock.calls[4][0].contents)).not.toHaveProperty("correctionRequired");
+  });
+
+  it("rejects unresolved questions after nine calls", async () => {
+    const input = request();
+    reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }], 3);
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
+    expect(generateContent).toHaveBeenCalledTimes(9);
+  });
+
+  it("accepts advisory polish without another round and rejects malformed reviews", async () => {
+    const input = request();
+    reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }]);
+    await generateQuestion(input, "test-key");
+    expect(generateContent).toHaveBeenCalledTimes(3);
+    const provider = generateContent.getMockImplementation()!;
+    generateContent.mockImplementation((arg) => JSON.parse(arg.contents).annotatedExamples ? Promise.resolve({ text: "{}" }) : provider(arg));
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "EVALUATION_FAILED" });
+  });
+
+  it("preserves quota errors and stops before calling providers on cancellation", async () => {
+    generateContent.mockRejectedValue(new Error("429 quota exhausted"));
+    await expect(generateQuestion(request(), "test-key")).rejects.toMatchObject({ code: "QUOTA_EXHAUSTED" });
+    generateContent.mockClear();
+    const controller = new AbortController(); controller.abort();
+    await expect(generateQuestion(request(), "test-key", { signal: controller.signal })).rejects.toMatchObject({ code: "GENERATION_TIMEOUT" });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it("enforces the deadline even if a provider ignores cancellation", async () => {
+    vi.useFakeTimers();
+    generateContent.mockImplementation(() => new Promise(() => {}));
+    const pending = expect(generateQuestion(request(), "test-key")).rejects.toMatchObject({ code: "GENERATION_TIMEOUT", status: 504 });
+    await vi.advanceTimersByTimeAsync(GENERATION_DEADLINE_MS);
+    await pending;
+    expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
   it("shuffles choices in code, relabels them, and remaps the correct answer", () => {

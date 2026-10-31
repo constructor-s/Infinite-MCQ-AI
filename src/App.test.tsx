@@ -136,7 +136,7 @@ describe("question navigation", () => {
     await waitFor(() => expect(onProgress).toBeDefined());
     const focused = makeQuestion({ generationFocus: focus, stem: "Which fresh focused treatment is most appropriate?" });
     await enqueue(focused);
-    await act(async () => onProgress?.({ ready: 1, target: 10, generating: true, focus }));
+    await act(async () => onProgress?.({ ready: 1, target: 3, generating: true, focus }));
     await screen.findByRole("heading", { name: focused.stem });
     expect(screen.queryByText("Review question")).not.toBeInTheDocument();
   });
@@ -188,10 +188,10 @@ describe("question navigation", () => {
     fireEvent.change(screen.getByLabelText("Practice"), { target: { value: "focused" } });
     fireEvent.click(screen.getByRole("button", { name: "Apply focus" }));
     await screen.findByText(/Focus saved/);
-    await act(async () => reportProgress({ ready: 10, target: 10, generating: false, focus: null }));
-    expect(screen.getByRole("status")).toHaveTextContent("Focused practice · Generating · 0/10 ready");
-    await act(async () => reportProgress({ ready: 2, target: 10, generating: true, focus: { discipline: "medicine" } }));
-    expect(screen.getByRole("status")).toHaveTextContent("Focused practice · Generating · 2/10 ready");
+    await act(async () => reportProgress({ ready: 3, target: 3, generating: false, focus: null }));
+    expect(screen.getByRole("status")).toHaveTextContent("Focused practice · Generating · 0/3 ready");
+    await act(async () => reportProgress({ ready: 2, target: 3, generating: true, focus: { discipline: "medicine" } }));
+    expect(screen.getByRole("status")).toHaveTextContent("Focused practice · Generating · 2/3 ready");
     await act(async () => pending.resolve());
   });
 
@@ -317,7 +317,7 @@ describe("question navigation", () => {
     render(<App />);
     await screen.findByText("Question unavailable in this browser");
     await waitFor(() => expect(onProgress).toBeDefined());
-    act(() => onProgress!({ ready: 1, target: 10, generating: true }));
+    act(() => onProgress!({ ready: 1, target: 3, generating: true }));
     expect(location.pathname).toBe(path);
     expect(screen.getByText("Question unavailable in this browser")).toBeInTheDocument();
     expect(await db.encounters.count()).toBe(0);
@@ -366,7 +366,7 @@ describe("question navigation", () => {
     act(() => {
       history.pushState(null, "", questionUrl(fast.id));
       window.dispatchEvent(new PopStateEvent("popstate"));
-      onProgress!({ ready: 2, target: 10, generating: false });
+      onProgress!({ ready: 2, target: 3, generating: false });
     });
     await act(async () => pending.resolve(slow));
     await screen.findByRole("heading", { name: fast.stem });
@@ -383,8 +383,8 @@ describe("question navigation", () => {
     await waitFor(() => expect(onProgress).toBeDefined());
     await enqueue(question);
     act(() => {
-      onProgress!({ ready: 1, target: 10, generating: true });
-      onProgress!({ ready: 1, target: 10, generating: false });
+      onProgress!({ ready: 1, target: 3, generating: true });
+      onProgress!({ ready: 1, target: 3, generating: false });
     });
     await screen.findByRole("heading", { name: question.stem });
     expect(location.pathname).toBe(questionUrl(question.id));
