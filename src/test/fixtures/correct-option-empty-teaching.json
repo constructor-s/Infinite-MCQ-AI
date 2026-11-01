@@ -1,0 +1,124 @@
+{
+  "provenance": {
+    "source": "User-supplied generation log, November 1, 2026",
+    "purpose": "Regression for empty correct-option teaching; preserve model responses without clinical edits. Original assignment tags were not supplied.",
+    "clinicalReviewStatus": "not_reviewed",
+    "legalReviewStatus": "not_reviewed"
+  },
+  "responses": [
+    {
+      "requestId": "2a6e3d5e-4ee8-4e59-a11c-8032f31504af",
+      "response": {
+        "vignette": "A 58-year-old man is admitted tothe surgical ward for recurrent severe right lower extremity cellulitis complicating chronic lymphedema. He has a history of coronary artery bypass grafting ten years ago utilizing a right greater saphenous vein harvest, which left the limb prone to chronic edema and recurrent infection. He is followed jointly by the general surgery service, a specialized wound care nurse, and an outpatient physiotherapist. During morning rounds, the physiotherapist asks you, the resident on duty, for details regarding the exact saphenous harvest technique and graft status to safely tailor the patient's upcoming compression therapy protocol. The patient is currently asleep and has previously consented generally to multidisciplinary inpatient care but has not discussed this specific therapy adjustment today.",
+        "stem": "What is the most appropriate professional action regarding sharing this clinical information?",
+        "options": [
+          {
+            "text": "Withhold the information until the patient awakens to provide explicit, case-specific consent.",
+            "hint": "Consider whether implicit consent for circle-of-care collaboration covers routine multidisciplinary updates.",
+            "explanation": "Withholding information is unnecessary because participating healthcare teammembers operate under implied consent for direct patient care."
+          },
+          {
+            "text": "Disclose the relevant surgical and clinical history to the physiotherapist to facilitate coordinated direct patient care.",
+            "hint": "",
+            "explanation": ""
+          },
+          {
+            "text": "Require the physiotherapist to submit a formal written chart request before discussing the patient's surgical history.",
+            "hint": "Assess if administrative hurdles are required for internal multidisciplinary team members.",
+            "explanation": "Formal written requests impede efficient inpatient care and are unnecessary for direct team members involved in active treatment."
+          },
+          {
+            "text": "Consult the hospital privacy officer before sharing any past surgical details withallied health team members.",
+            "hint": "Determine if routine clinical communication requires institutional privacy officer intervention.",
+            "explanation": "Consulting a privacy officer is an excessive delay for standard interprofessional information sharing within the circle of care."
+          },
+          {
+            "text": "Direct the physiotherapist to obtain the history from the patient's electronic health record independently without discussing it verbally.",
+            "hint": "Evaluate the role of direct verbal communication and collaboration among active care team members.",
+            "explanation": "Telling team members to search records independently undermines collaborative interprofessional communication and patient safety."
+          }
+        ],
+        "correctIndex": 1,
+        "shortExplanation": "Disclosing relevant surgical details to an established member of the multidisciplinary care team is appropriate under the circle of care, as implied consent permits sharing necessary information for coordinated treatment without waiting for explicit re-consent.",
+        "highYieldPearl": "Members of a patient's direct circle of care may share relevant health information to provide safe, coordinated treatment under the principle of implied consent.",
+        "vignetteSignature": "Surgery_Cellulitis_Lymphedema_Privacy"
+      }
+    },
+    {
+      "requestId": "10699c14-2c26-4487-9b34-43fffaa3e520",
+      "response": {
+        "vignette": "A 45-year-old woman returns to the surgical ward three days after an elective laparoscopic cholecystectomy with increasing abdominal pain, nausea, and mild jaundice. Abdominal examination reveals localized right upper quadrant tenderness without generalized peritonitis, and serum total bilirubin is 85 umol/L with alkaline phosphatase 420 U/L. An urgent computed tomography scan and endoscopic retrograde cholangiopancreatography confirm a complete clip ligation and transection of the common bile duct sustained duringzyg index procedure. You are tasked with discussingthese findings and the immediate management plan with the patient.",
+        "stem": "What is the most appropriate initial communication action regarding this adverse event?",
+        "options": [
+          {
+            "text": "Explain the diagnostic findings clearly, acknowledge the complication explicitly, and outline the plan for transfer to a hepatobiliary center without using defensive language.",
+            "hint": "",
+            "explanation": ""
+          },
+          {
+            "text": "Focus primarily on offering a sincere apology and expressing empathy for her pain while deferring detailed explanations of the ductal injury until the surgical team completes an internal review.",
+            "hint": "Empathy and apology are necessary, but withholding known factual findings inappropriatelydelays required transparent disclosure.",
+            "explanation": "Deferring disclosurepending an internal review violates the patient's right to timely, truthful information about a known diagnostic finding."
+          },
+          {
+            "text": "Inform the patient that she developed an unexpected infection and inflammation near the bile ducts, avoiding the term transection to prevent unnecessary panic.",
+            "hint": "Euphemisms or inaccurate descriptions undermine trust and fail to provide truthfulinformation regarding a procedural complication.",
+            "explanation": "Minimizing the anatomical injury as mere infection misrepresents the confirmed ERCP findings of complete transection."
+          },
+          {
+            "text": "Explain that bile duct injuries are a known accepted risk of laparoscopic cholecystectomy that frequently occur, reassuring her that no specific error was made.",
+            "hint": "Framing a major operative complication as a frequent occurrence without acknowledging the specific event is dismissive and misleading.",
+            "explanation": "While it is a known risk, minimizing the severity and falsely claiming no error occurred prior to full review avoids proper accountability."
+          },
+          {
+            "text": "State immediately that a surgical error occurred due to technical negligence during the operation and provide the name of the specific assisting resident at fault.",
+            "hint": "Assigning premature blame and individual fault before a formal root cause analysis is counterproductive and unprofessional.",
+            "explanation": "Prematurely declaringnegligence and singling out individual team members bypasses institutional review processes and unprofessional."
+          }
+        ],
+        "correctIndex": 0,
+        "shortExplanation": "Prompt and truthful disclosure of an adverse event requires clearly explainingthe confirmed diagnostic findings and outlining the management plan without defensiveness or delay.",
+        "highYieldPearl": "Medical error disclosure must be prompt, truthful, and empathetic, focusing on objective facts and the immediate management plan rather than speculation or blame.",
+        "vignetteSignature": "Post-cholecystectomy CBD transection disclosure"
+      }
+    },
+    {
+      "requestId": "dae88a1d-c380-4fe6-bac3-9c14a0b04236",
+      "response": {
+        "vignette": "A 52-year-old woman is seen in the surgical bariatric clinic for routine six-month follow-up after a Roux-en-Y gastric bypass. She is recovering well and expresses a desire to coordinateher ongoing dietary management with a registered dietitian in her local community. Her community dietitian subsequently faxes a formal records request toyour clinic asking for the patient's complete chart, including the pre-operative psychiatric evaluation and psychological screening notes, to optimize dietary counseling.",
+        "stem": "What is the most appropriate initial response regarding the release of this patient's information?",
+        "options": [
+          {
+            "text": "Releasethe complete medical chart immediately because allied health providers in the community are automatically included in the patient's circle of care.",
+            "hint": "Consider whether community providers treating a patient at a later date automatically inherit blanket access to all hospital records without verification.",
+            "explanation": "Releasing the entire medical chart without patient verification assumes an overly broad circle of care and ignores the need for explicit consent for sensitive third-party disclosures."
+          },
+          {
+            "text": "Contact the patient to obtain explicit consent specifying which records may be shared with the community dietitian.",
+            "hint": "",
+            "explanation": ""
+          },
+          {
+            "text": "Deny the request without contacting the patient because external community providers have nolegal right to hospital-based surgical records.",
+            "hint": "Reflecting on collaborative care, evaluate whether external providers can receive records with proper authorization rather than facing outright denial.",
+            "explanation": "Denying the request outright fails to support interprofessional collaboration and ignores the possibility of releasing records with the patient's consent."
+          },
+          {
+            "text": "Forward only the psychological screening notes since nutritional management depends primarily on addressing underlying behavioral factors.",
+            "hint": "Determine whether transmitting sensitive psychiatric and psychological notesalone represents appropriate and comprehensive consent-based information sharing.",
+            "explanation": "Forwarding only psychological notes bypasses the operative and clinical records needed for dietary planning while improperly disclosing sensitive mental health documents without broad verification."
+          },
+          {
+            "text": "Transmit the operative report and follow-up clinical notes to the dietitian under implied consent since the patient expressed a desire for coordinated care.",
+            "hint": "Assess whether a verbal expression of a desire for coordinated care in clinic grants implied consent to transmit comprehensive records to an external provider.",
+            "explanation": "Although the patient expressed interest in coordinated care, transmitting records to an external community provider typically requires explicit consent, particularly when formal external requests and sensitive records are involved."
+          }
+        ],
+        "correctIndex": 1,
+        "shortExplanation": "While the patient expressed a desire to coordinate care, releasing records to an external community provider requires contacting the patient to obtain explicit, informed consent specifying which documents may be shared.",
+        "highYieldPearl": "Interprofessional collaboration requires patient authorization before transmitting medical records to external providers, particularly when sensitive psychological or psychiatric evaluations are requested.",
+        "vignetteSignature": "Bariatric surgery follow-up and records release"
+      }
+    }
+  ]
+}

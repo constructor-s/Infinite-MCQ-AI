@@ -1,0 +1,64 @@
+{
+  "id": "long-capacity-answer",
+  "provenance": {
+    "source": "User-supplied /tmp/iworld-ethics-verbal-v8.log, request afa363cf-f7b3-4c33-892f-97bf5f8ebbd9",
+    "evaluationScope": "Wording and distractor construction only; clinical and legal content are not validated.",
+    "clinicalReviewStatus": "not_reviewed",
+    "legalReviewStatus": "not_reviewed",
+    "usage": "Offline regression only; do not inject the full draft into production generation prompts."
+  },
+  "question": {
+    "vignette": "A 32-year-old man with Down syndrome and moderate intellectual disability, living in a supported community group home, is accompanied by his primary support worker for evaluation of recurrent symptomatic cholelithiasis requiring elective laparoscopic cholecystectomy. He is friendly, engages warmly, and clearly expresses that he wants his tummy ache fixed because the pain hurts when he eats. When asked about the planned surgery, he understands that he will go to sleep in a hospital and wake up without pain, but he is unable to comprehend the specific risks of general anesthesia, potential surgical complications, or the consequences of refusing the procedure. He has no court-appointed guardian, but his aging parents remain actively involved and are listed as his primary informal contacts. His support worker notes that he manages his daily personal care routine within the group home with minimal prompting but relies heavily on staff for financial and complex health decisions.",
+    "blueprint": {
+      "discipline": "psychiatry",
+      "physicianActivity": "professional_behaviours",
+      "careDimension": "psychosocial",
+      "cognitiveTask": "capacity_consent",
+      "mccObjectiveIds": [
+        "21-1"
+      ]
+    },
+    "stem": "What is the most appropriate next step regarding consent and decision-making for this patient's proposed elective surgery?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Obtain informed consent directly from the patient since he understands the basic goal of relieving his abdominal pain.",
+        "hint": "Consider whether understanding a general goal satisfies the legal threshold for complex medical procedures.",
+        "explanation": "Incorrect because capacity is decision-specific; understanding a broad goal is insufficient if the patient cannot comprehend specific risks, benefits, and consequences of the proposed intervention."
+      },
+      {
+        "id": "B",
+        "text": "Proceed with surgery under emergency consent provisions given his developmental disability and living arrangement.",
+        "hint": "Evaluate whether an elective procedure falls under the legal definition of an emergency.",
+        "explanation": "Incorrect because this is an elective, non-emergency intervention, meaning standard elective consent rules and substitute decision-making apply rather than emergency treatment exceptions."
+      },
+      {
+        "id": "C",
+        "text": "Perform a formal capacity assessment for this specific surgical decision and, if he lacks capacity, involve his legally designated or hierarchy-based substitute decision-maker.",
+        "hint": "Focus on the decision-specific nature of capacity and the appropriate protocol when a patient cannot weigh risks and benefits.",
+        "explanation": "Correct because capacity must be evaluated for the specific decision at hand, and finding a lack of capacity necessitates turning to the appropriate substitute decision-maker according to jurisdictional legislation."
+      },
+      {
+        "id": "D",
+        "text": "Request immediate court appointment of a public trustee to act as his guardian prior to scheduling any elective intervention.",
+        "hint": "Consider whether formal court guardianship is always mandatory before family members can participate as substitute decision-makers.",
+        "explanation": "Incorrect because family members or designated informal contacts typically act as substitute decision-makers via statutory hierarchy without requiring formal court guardianship for routine or elective medical care."
+      },
+      {
+        "id": "E",
+        "text": "Delegate the consent process entirely to the group home support worker who knows him best in daily life.",
+        "hint": "Review who holds legal priority as a substitute decision-maker under standard healthcare consent frameworks.",
+        "explanation": "Incorrect because paid support workers or care providers are typically excluded from acting as substitute decision-makers due to conflict of interest, whereas available family members hold legal priority."
+      }
+    ],
+    "correctOptionId": "C",
+    "shortExplanation": "The decisive distinction is recognizing that capacity is task- and decision-specific. While the patient understands the basic goal of treatment, his inability to weigh risks and benefits means he lacks capacity for this specific surgery, requiring engagement of an eligible substitute decision-maker rather than relying on support staff or assuming emergency status.",
+    "highYieldPearl": "Capacity is decision-specific; individuals with intellectual disabilities may retain capacity for simple choices while lacking it for complex surgical interventions, necessitating adherence to statutory substitute decision-maker hierarchies.",
+    "vignetteSignature": "PSYCH-21-1-CAPACITY-01"
+  },
+  "expected": {
+    "correctionKind": "answer_giveaway",
+    "correctWords": 23,
+    "distractorMedianWords": 18
+  }
+}

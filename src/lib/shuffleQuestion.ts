@@ -1,8 +1,8 @@
-import type { GeneratedQuestion, OptionId } from "./contracts.js";
+import type { OptionId } from "./contracts.js";
 
 const OPTION_IDS: OptionId[] = ["A", "B", "C", "D", "E"];
 
-export function shuffleQuestionOptions<T extends Pick<GeneratedQuestion, "options" | "correctOptionId">>(
+export function shuffleQuestionOptions<T extends { options: { id: OptionId; text: string }[]; correctOptionId: OptionId }>(
   question: T,
   random: () => number = Math.random
 ): T {

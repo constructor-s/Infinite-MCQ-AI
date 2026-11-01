@@ -43,10 +43,12 @@ function post(body) {
 
 async function direct(body) {
   const trace = [];
+  const startedAt = Date.now();
   try {
-    return { status: 200, body: await generate(body, process.env.GEMINI_API_KEY, { onTrace: (event) => trace.push(event) }), trace };
+    const question = await generate(body, process.env.GEMINI_API_KEY, { onTrace: (event) => trace.push(event) });
+    return { status: 200, body: question, trace, durationMs: Date.now() - startedAt };
   } catch (error) {
-    return { status: error.status ?? 0, body: { error: { code: error.code ?? "EVALUATION_RUN_FAILED", message: "Generation or review failed; inspect stage diagnostics." } }, trace };
+    return { status: error.status ?? 0, body: { error: { code: error.code ?? "EVALUATION_RUN_FAILED", message: "Generation or review failed; inspect stage diagnostics." } }, trace, durationMs: Date.now() - startedAt };
   }
 }
 

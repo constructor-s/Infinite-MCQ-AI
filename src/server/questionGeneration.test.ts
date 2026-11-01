@@ -6,8 +6,11 @@ import { generateQuestion, GenerationError, makePrompt, validateQuestionQuality,
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion";
 import { eligibility } from "../data/curriculum";
 import { sourceObjectivesById } from "./objectives";
+import { questionDraftSchema, questionCoreContent, readQuestionDraft } from "./questionDraft";
+import { optionLengthIssue } from "./questionOptions";
 import { assignmentIsEligible, alignmentIssue } from "./questionPrompts";
 import { type ClinicalReview, type EditorialReview } from "./questionReview";
+import lengthRegression from "../test/fixtures/long-capacity-answer.json";
 import distractorRegression from "../test/fixtures/obvious-communication-distractors.json";
 import exemplars from "../../curriculum/exemplars.json";
 
@@ -33,11 +36,21 @@ type ReviewOptions = {
   grounding?: object;
   revisionError?: Error;
   refined?: GeneratedQuestion;
-  refinementSummary?: string;
   malformedRefinement?: boolean;
+  rawRefined?: unknown;
 };
 const giveaway = { kind: "answer_giveaway" as const, evidence: "One option uniquely bundles detailed care.", correction: "Compare equivalent dispositions." };
-const correctness = { kind: "clinical_error" as const, evidence: "The explanation contradicts the supplied ECG finding.", correction: "Correct the explanation to agree with the ECG." };
+const correctness = { kind: "clinical_error" as const, evidence: "The intended action contradicts the supplied ECG finding.", correction: "Correct the action to agree with the ECG." };
+
+function draftContent(question: GeneratedQuestion) {
+  return questionCoreContent(question);
+}
+
+function finalContent(question: GeneratedQuestion) {
+  return { ...draftContent(question), options: question.options.map((option) => option.id === question.correctOptionId
+    ? { text: option.text } : { text: option.text, hint: option.hint, explanation: option.explanation }),
+    shortExplanation: question.shortExplanation, highYieldPearl: question.highYieldPearl, vignetteSignature: question.vignetteSignature };
+}
 
 function reviewProvider(candidates: GeneratedQuestion[], options: ReviewOptions = {}) {
   let round = 0;
@@ -45,13 +58,13 @@ function reviewProvider(candidates: GeneratedQuestion[], options: ReviewOptions 
     const prompt = JSON.parse(arg.contents);
     if (prompt.draft && prompt.reviewFeedback) {
       if (options.revisionError) throw options.revisionError;
-      if (options.malformedRefinement) return { text: "{bad refinement" };
-      return { text: JSON.stringify({ question: options.refined ?? candidates[Math.min(round, candidates.length - 1)],
-        summary: options.refinementSummary ?? "Preserved the draft after considering all available feedback; no useful change was needed." }) };
+      if (options.malformedRefinement) return { text: "PRIVATE_MODEL_CONTENT_test-key" };
+      if (options.rawRefined !== undefined) return { text: JSON.stringify(options.rawRefined) };
+      return { text: JSON.stringify(finalContent(options.refined ?? candidates[Math.min(round, candidates.length - 1)])) };
     }
     if (!prompt.question) {
       round += 1;
-      return { text: JSON.stringify(candidates[Math.min(round - 1, candidates.length - 1)]) };
+      return { text: JSON.stringify(draftContent(candidates[Math.min(round - 1, candidates.length - 1)])) };
     }
     const override = prompt.annotatedExamples ? options.editorial : options.clinical;
     if (override === "unavailable") throw new Error("Reviewer unavailable");
@@ -65,7 +78,7 @@ function reviewProvider(candidates: GeneratedQuestion[], options: ReviewOptions 
     const alternativeId = prompt.question.options.find((o: { id: string }) => o.id !== bestId).id;
     return {
       text: JSON.stringify({ answerId: options.disagree ? alternativeId : bestId, strongestDistractorId: options.disagree ? bestId : alternativeId,
-        decisiveCaseFact: candidate.vignette, corrections: [], advisories: [], ...override }),
+        decisiveCaseFact: candidate.vignette.slice(0, 300), corrections: [], advisories: [], ...override }),
       ...(options.grounding ? { candidates: [{ groundingMetadata: options.grounding }] } : {})
     };
   });
@@ -91,17 +104,27 @@ describe("question generation safeguards", () => {
     expect(prompt).not.toHaveProperty("difficulty");
     expect(result).not.toHaveProperty("difficulty");
     expect(generateContent.mock.calls[0][0].config.responseJsonSchema.properties).not.toHaveProperty("difficulty");
+    expect(generateContent.mock.calls[0][0].config.responseJsonSchema.properties).not.toHaveProperty("blueprint");
+    expect(generateContent.mock.calls[3][0].config.responseJsonSchema.properties).not.toHaveProperty("question");
+    expect(generateContent.mock.calls[3][0].config.responseJsonSchema.properties).toHaveProperty("shortExplanation");
+    expect(Object.keys(generateContent.mock.calls[0][0].config.responseJsonSchema.properties).sort()).toEqual(["correctIndex", "options", "stem", "vignette"]);
+    expect(generateContent.mock.calls[0][0].config.responseJsonSchema.properties.options.items.type).toBe("string");
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW", "LOW"]);
+    expect(prompt.objective).not.toHaveProperty("content");
     expect(prompt.levelInstruction).toMatch(/graduating medical student entering supervised practice in Canada/);
     expect(prompt.levelInstruction).toMatch(/application of the supplied findings/);
     expect(prompt.levelInstruction).not.toMatch(/numeric|difficulty level/i);
     expect(prompt.answerInstruction).toMatch(/exactly five homogeneous choices: one unambiguously best answer and four distractors/);
     expect(prompt.answerInstruction).toMatch(/at least one strong distractor/);
     expect(prompt.answerInstruction).toMatch(/specific finding, timing consideration, contraindication or decision priority supplied in the case/);
-    expect(prompt.answerInstruction).toMatch(/short explanation identify the decisive distinction/);
-    expect(prompt.answerInstruction).toMatch(/Keep hints from disclosing the decisive distinction/);
+    expect(JSON.stringify(prompt)).not.toMatch(/shortExplanation|highYieldPearl|vignetteSignature|misconception hint|110%/);
+    expect(prompt.answerInstruction).toContain("code measures lengths separately");
+    expect(prompt.answerInstruction).toContain("one specific mistaken fact");
     expect(prompt.qualityInstruction).toMatch(/If both remain defensible, revise the case, stem or options/);
     expect(prompt.qualityInstruction).toMatch(/Do not create difficulty by omitting necessary information/);
     expect(result.promptVersion).toBe(PROMPT_VERSION);
+    const core = readQuestionDraft(questionDraftSchema.parse(draftContent(result)), input.blueprint);
+    expect(core.options.every((option) => !("hint" in option))).toBe(true);
   });
 
   it("preserves five unique choices and a single correct-option identifier in the schema", () => {
@@ -203,13 +226,14 @@ describe("question generation safeguards", () => {
   it("repairs the actual structurally invalid draft and preserves the assignment", async () => {
     const input = request();
     const response = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    reviewProvider([{ ...response, blueprint: { ...input.blueprint, discipline: "surgery" } }, response]);
+    reviewProvider([{ ...response, options: response.options.slice(0, 4) }, response]);
     const result = await generateQuestion(input, "test-key");
     expect(result.blueprint).toEqual(input.blueprint);
     expect(generateContent).toHaveBeenCalledTimes(5);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "MEDIUM", "LOW", "LOW", "LOW"]);
     const second = JSON.parse(generateContent.mock.calls[1][0].contents);
-    expect(second.correctionRequired.structuralErrors).toMatch(/exact assigned blueprint/);
-    expect(second.previousDraft.blueprint.discipline).toBe("surgery");
+    expect(second.correctionRequired.structuralErrors).toMatch(/options/);
+    expect(second.previousDraft).not.toHaveProperty("blueprint");
   });
 
   it("uses four calls for valid output and at most two candidates for structural errors", async () => {
@@ -219,8 +243,8 @@ describe("question generation safeguards", () => {
     await generateQuestion(input, "test-key");
     expect(generateContent).toHaveBeenCalledTimes(4);
     generateContent.mockClear();
-    reviewProvider([{ ...response, blueprint: { ...input.blueprint, discipline: "surgery" } }]);
-    await expect(generateQuestion(input, "test-key")).rejects.toThrow(/exact assigned/);
+    reviewProvider([{ ...response, options: response.options.slice(0, 4) }]);
+    await expect(generateQuestion(input, "test-key")).rejects.toThrow(/schema/);
     expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
@@ -239,7 +263,10 @@ describe("question generation safeguards", () => {
     expect(clinicalCall[0].config.tools).toEqual([{ googleSearch: {} }]);
     const editorialCall = generateContent.mock.calls.find(([arg]) => JSON.parse(arg.contents).annotatedExamples)!;
     expect(editorialCall[0].config.tools).toBeUndefined();
-    expect(events).toHaveLength(6);
+    const editorQuestion = JSON.parse(editorialCall[0].contents).question;
+    expect(Object.keys(editorQuestion).sort()).toEqual(["blueprint", "correctOptionId", "options", "stem", "vignette"]);
+    expect(editorQuestion.options.every((option: object) => Object.keys(option).sort().join() === "id,text")).toBe(true);
+    expect(events).toHaveLength(10);
     expect(events).toContainEqual(expect.objectContaining({ stage: "clinical", data: expect.objectContaining({ grounding }) }));
     expect(result).not.toHaveProperty("reviews");
     expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("temperature");
@@ -252,7 +279,12 @@ describe("question generation safeguards", () => {
     const result = await generateQuestion(input, "test-key");
     expect(generateContent).toHaveBeenCalledTimes(4);
     const revision = JSON.parse(generateContent.mock.calls[3][0].contents);
-    expect(revision.draft).toEqual(generatedQuestionSchema.parse(candidate));
+    expect(revision.draft).toEqual(draftContent(candidate));
+    expect(revision.draft).not.toHaveProperty("blueprint");
+    expect(revision.avoidScenarios).toEqual(input.avoidSignatures);
+    expect(revision.lengthBudget).toMatchObject({ correctWords: 3, maximumKeyWords: 5, exceedsLimit: false });
+    expect(revision.reviewFeedback).not.toHaveProperty("editorial");
+    expect(revision.reviewFeedback.clinical).not.toHaveProperty("corrections");
     expect(revision.reviewFeedback.corrections).toEqual([expect.objectContaining({ reviewer: "editorial", kind: "answer_giveaway" })]);
     expect(revision.reviewFeedback.clinical.answerId).toBe(candidate.correctOptionId);
     expect(result.blueprint).toEqual(input.blueprint);
@@ -296,42 +328,126 @@ describe("question generation safeguards", () => {
   it("does not deliver a known correctness defect when revision fails", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    const invalid = { ...candidate, blueprint: { ...input.blueprint, discipline: "surgery" as const } };
+    const invalid = { ...candidate, options: candidate.options.slice(0, 4) };
     reviewProvider([candidate, invalid], { editorial: { corrections: [correctness] } });
     await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
     expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
-  it("falls back to the valid original after an editorial-only revision fails", async () => {
+  it("preserves a final provider quota error without delivering the bare draft", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
     reviewProvider([candidate], { editorial: { corrections: [giveaway] }, revisionError: new Error("429 quota exhausted") });
-    const trace: { data: unknown }[] = [];
-    const result = await generateQuestion(input, "test-key", { onTrace: (event) => trace.push(event) });
-    expect(result.vignette).toBe(candidate.vignette);
-    expect(trace.at(-1)?.data).toMatchObject({ accepted: true, outcome: "fallback", refinementFailure: "QUOTA_EXHAUSTED" });
+    const events: { data: unknown }[] = [];
+    await expect(generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) })).rejects.toMatchObject({ code: "QUOTA_EXHAUSTED" });
+    expect(events.at(-1)?.data).toMatchObject({ accepted: false, outcome: "rejected_refinement", refinementFailure: "QUOTA_EXHAUSTED" });
     expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
-  it("also falls back after a structurally invalid editorial-only revision", async () => {
+  it("rejects a structurally invalid final question without a fallback", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    const invalid = { ...candidate, blueprint: { ...input.blueprint, discipline: "surgery" as const } };
-    reviewProvider([candidate, invalid], { editorial: { corrections: [giveaway] } });
-    const result = await generateQuestion(input, "test-key");
-    expect(result.blueprint).toEqual(input.blueprint);
-    expect(result.vignette).toBe(candidate.vignette);
+    reviewProvider([candidate], { refined: { ...candidate, options: candidate.options.slice(0, 4) }, editorial: { corrections: [giveaway] } });
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
     expect(generateContent).toHaveBeenCalledTimes(4);
+  });
+
+  it("normalizes empty correct-option teaching without retries or changes to structured output and thinking", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    const raw = finalContent(candidate);
+    raw.options[raw.correctIndex].hint = "";
+    raw.options[raw.correctIndex].explanation = "";
+    reviewProvider([candidate], { rawRefined: raw });
+    const result = await generateQuestion(input, "test-key");
+    const correct = result.options.find((option) => option.id === result.correctOptionId)!;
+    expect(correct.explanation).toBe(candidate.shortExplanation);
+    expect(correct.hint).toBe("Consider how the case findings support this choice.");
+    expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW", "LOW"]);
+    for (const [arg] of generateContent.mock.calls) {
+      expect(arg.config.responseMimeType).toBe("application/json");
+      expect(arg.config.responseJsonSchema.type).toBe("object");
+    }
+  });
+
+  it.each(["json", "schema", "quality"] as const)("logs safe %s validation diagnostics by default and retains them in traces", async (category) => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "info");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    const raw = finalContent(candidate);
+    raw.vignette += " PRIVATE_MODEL_CONTENT_test-key";
+    if (category === "schema") raw.options[1].hint = "";
+    if (category === "quality") raw.options[0].text = "Arrange an immediate comprehensive assessment for reperfusion with the appropriate cardiology service";
+    reviewProvider([candidate], { rawRefined: raw, malformedRefinement: category === "json" });
+    const events: { stage: string; data: unknown }[] = [];
+    await expect(generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) })).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
+    const rows = warn.mock.calls.map(([line]) => String(line)).filter((line) => line.startsWith("[question-generation:validation] "));
+    expect(rows).toHaveLength(1);
+    const diagnostic = JSON.parse(rows[0].slice("[question-generation:validation] ".length));
+    expect(diagnostic).toMatchObject({ requestId: expect.any(String), stage: "refinement", category,
+      code: category === "json" ? "INVALID_JSON" : category === "schema" ? "INVALID_REFINEMENT" : "ANSWER_LENGTH_GIVEAWAY" });
+    if (category === "schema") expect(diagnostic.issues).toContainEqual(expect.objectContaining({ path: ["options", 1, "hint"], message: expect.stringContaining("15 characters") }));
+    expect(events).toContainEqual(expect.objectContaining({ stage: "validation", data: diagnostic }));
+    expect(rows[0]).not.toContain("PRIVATE");
+    expect(rows[0]).not.toContain("test-key");
+    expect(debug).not.toHaveBeenCalled();
+    expect(generateContent).toHaveBeenCalledTimes(4);
+  });
+
+  it("bounds schema diagnostics and suppresses unknown field names that contain model content or credentials", async () => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "info");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    const raw = { ...finalContent(candidate), vignette: "", stem: "", shortExplanation: "", highYieldPearl: "", vignetteSignature: "", correctIndex: 6,
+      PRIVATE_MODEL_CONTENT_test_key: "PRIVATE_MODEL_CONTENT_test-key" };
+    raw.options = raw.options.map((option) => ({ ...option, text: "" }));
+    reviewProvider([candidate], { rawRefined: raw });
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
+    const line = String(warn.mock.calls.find(([value]) => String(value).startsWith("[question-generation:validation] "))![0]);
+    const diagnostic = JSON.parse(line.slice("[question-generation:validation] ".length));
+    expect(diagnostic.issues).toHaveLength(10);
+    expect(diagnostic.issueCount).toBeGreaterThan(10);
+    expect(diagnostic.truncated).toBe(true);
+    for (const issue of diagnostic.issues) {
+      expect(issue.message.length).toBeLessThanOrEqual(240);
+      expect(issue.path.length).toBeLessThanOrEqual(8);
+    }
+    expect(line).not.toContain("PRIVATE_MODEL_CONTENT");
+    expect(line).not.toContain("test-key");
+  });
+
+  it("reports unknown fields without echoing their names in warnings or traces", async () => {
+    vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "info");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([candidate], { rawRefined: { ...finalContent(candidate), "PRIVATE_MODEL_CONTENT_test-key": "not for logging" } });
+    const events: { stage: string; data: unknown }[] = [];
+    await expect(generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) })).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
+    const line = String(warn.mock.calls.find(([value]) => String(value).startsWith("[question-generation:validation] "))![0]);
+    const diagnostic = JSON.parse(line.slice("[question-generation:validation] ".length));
+    expect(diagnostic.issues).toContainEqual({ path: [], code: "unrecognized_keys", message: "Unexpected fields in structured response." });
+    const validation = events.filter((event) => event.stage === "validation");
+    expect(validation).toHaveLength(1);
+    for (const value of [line, JSON.stringify(validation[0].data)]) {
+      expect(value).not.toContain("PRIVATE");
+      expect(value).not.toContain("test-key");
+    }
   });
 
   it("preserves final refinement after one initial repair, for at most five calls", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    const invalid = { ...candidate, blueprint: { ...input.blueprint, discipline: "surgery" as const } };
+    const invalid = { ...candidate, options: candidate.options.slice(0, 4) };
     reviewProvider([invalid, candidate], { editorial: { corrections: [correctness] } });
     await generateQuestion(input, "test-key");
     expect(generateContent).toHaveBeenCalledTimes(5);
-    expect(JSON.parse(generateContent.mock.calls[4][0].contents).draft).toEqual(generatedQuestionSchema.parse(candidate));
+    expect(JSON.parse(generateContent.mock.calls[4][0].contents).draft).toEqual(draftContent(candidate));
     generateContent.mockClear();
     reviewProvider([invalid, candidate, invalid], { editorial: { corrections: [correctness] } });
     await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
@@ -381,17 +497,16 @@ describe("question generation safeguards", () => {
       hint: "Distinguish immediate housing and income support from advice about immigration status.",
       explanation: "Housing and income support may address economic barriers, but this response does not directly address the patient's specific fear about immigration status."
     };
-    const refined = { ...candidate, options: candidate.options.map((o) => o.id === "D" ? replacement : o),
+    const refined = { ...candidate, options: candidate.options.map((o) => o.id === "D" ? replacement : o.id === candidate.correctOptionId ? { ...o, text: "Acknowledge her concerns and offer confidential specialist legal advice about immigration status and safe access to support." } : o),
       shortExplanation: "Specialized legal support directly addresses the patient's stated immigration concern; housing and income support alone address a different part of her practical barriers." };
-    reviewProvider([candidate], { editorial: { corrections: [correction], advisories: [advisory] }, refined,
-      refinementSummary: "Replaced the employment-before-shelter filler with a respectful competing response and updated its hint and explanation." });
+    reviewProvider([candidate], { editorial: { corrections: [correction], advisories: [advisory] }, refined });
     const result = await generateQuestion(input, "test-key");
     expect(generateContent).toHaveBeenCalledTimes(4);
     const editor = JSON.parse(generateContent.mock.calls[3][0].contents);
     expect(editor.reviewFeedback.corrections).toContainEqual({ ...correction, reviewer: "editorial" });
     expect(editor.reviewFeedback.advisories).toContain(advisory);
     expect(result.options.find((o) => o.text === replacement.text)).toMatchObject({ text: replacement.text, hint: replacement.hint, explanation: replacement.explanation });
-    expect(result.correctOptionId).toBe(result.options.find((o) => o.text === candidate.options.find((o) => o.id === candidate.correctOptionId)!.text)!.id);
+    expect(result.correctOptionId).toBe(result.options.find((o) => o.text === refined.options.find((o) => o.id === refined.correctOptionId)!.text)!.id);
     expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
   });
 
@@ -408,14 +523,14 @@ describe("question generation safeguards", () => {
     expect(editor.context.objective.enablingObjective.id).toBe(input.enablingObjectiveId);
   });
 
-  it("always refines with no findings and keeps the summary private", async () => {
+  it("always writes full final teaching with no findings and no model summary", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    reviewProvider([candidate], { editorial: { advisories: [] }, refinementSummary: "Preserved the question because both reviews found no useful changes." });
+    reviewProvider([candidate], { editorial: { advisories: [] } });
     const events: { data: unknown }[] = [];
     const result = await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
     expect(generateContent).toHaveBeenCalledTimes(4);
-    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_unchanged", changed: false, refinementSummary: expect.stringContaining("both reviews") });
+    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
     expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
     expect(result).not.toHaveProperty("summary");
     expect(result).not.toHaveProperty("question");
@@ -425,15 +540,78 @@ describe("question generation safeguards", () => {
     expect(finalCall.config.systemInstruction).toContain("reviewer agreement is not proof of quality");
   });
 
-  it("determines changed content from validated output rather than the refinement summary", async () => {
+  it("does not count newly generated teaching as a change to the core question", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
     const refined = { ...candidate, shortExplanation: candidate.shortExplanation + " Prioritize the time-sensitive finding." };
-    reviewProvider([candidate], { refined, refinementSummary: "Preserved the draft." });
+    reviewProvider([candidate], { refined });
     const events: { data: unknown }[] = [];
     const result = await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
     expect(result.shortExplanation).toBe(refined.shortExplanation);
-    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_changed", changed: true });
+    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
+  });
+
+  it("maps a rewritten final answer and reordered options independently of the draft IDs", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    const refined: GeneratedQuestion = { ...candidate, correctOptionId: "B", options: [candidate.options[4],
+      { ...candidate.options[1], text: "Urgent coronary angiography" }, candidate.options[0], candidate.options[3], candidate.options[2]],
+      shortExplanation: "The final case requires urgent coronary angiography based on its time-sensitive findings." };
+    reviewProvider([candidate], { refined });
+    const events: { data: unknown }[] = [];
+    const result = await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
+    const answer = result.options.find((option) => option.id === result.correctOptionId)!;
+    expect(answer.text).toBe("Urgent coronary angiography");
+    expect(answer.explanation).toBe(refined.shortExplanation);
+    expect(answer.hint).toBe("Consider how the case findings support this choice.");
+    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_changed", changedFields: ["options", "correctIndex"] });
+    expect(JSON.parse(generateContent.mock.calls[3][0].contents).reviewFeedback.clinical.answerId).toBe("A");
+  });
+
+  it("checks the final signature and hints after accepting a lean draft", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([candidate]);
+    await expect(generateQuestion({ ...input, avoidSignatures: [candidate.vignetteSignature] }, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    generateContent.mockClear();
+    const refined = { ...candidate, options: candidate.options.map((option, index) => index === 1 ? {
+      ...option, hint: `Select ${candidate.options[0].text} instead.`
+    } : option) };
+    reviewProvider([candidate], { refined });
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
+    expect(generateContent).toHaveBeenCalledTimes(4);
+  });
+
+  it.each([false, true])("routes the measured length defect to refinement despite empty or unavailable reviews (unavailable=%s)", async (unavailable) => {
+    const candidate = generatedQuestionSchema.parse(lengthRegression.question);
+    const entry = eligibility.find((e) => e.objectiveId === "21-1" && e.discipline === "psychiatry" && e.physicianActivity === "professional_behaviours" && e.careDimension === "psychosocial" && e.cognitiveTasks.includes("capacity_consent"))!;
+    const input = { ...request(), topicId: "mcc.21-1", blueprint: candidate.blueprint, enablingObjectiveId: entry.enablingObjectiveId };
+    const refined = { ...candidate, options: candidate.options.map((option) => option.id === candidate.correctOptionId ? {
+      ...option, text: "Assess capacity for this surgical decision and involve the legally appropriate substitute decision-maker if he lacks capacity."
+    } : option) };
+    reviewProvider([candidate], { refined, clinical: unavailable ? "unavailable" : {}, editorial: unavailable ? "unavailable" : { advisories: [] } });
+    const result = await generateQuestion(input, "test-key");
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    expect(JSON.parse(generateContent.mock.calls[3][0].contents).reviewFeedback.corrections).toContainEqual(expect.objectContaining({ reviewer: "construction", kind: "answer_giveaway", evidence: expect.stringContaining("23 words") }));
+    expect(optionLengthIssue(result)).toBeUndefined();
+  });
+
+  it.each([false, true])("never falls back to a known length giveaway when refinement is unchanged or fails (failure=%s)", async (failure) => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    candidate.options[0].text = "Arrange an immediate comprehensive assessment for reperfusion with the appropriate cardiology service";
+    reviewProvider([candidate], { clinical: "unavailable", editorial: "unavailable", ...(failure ? { revisionError: new Error("provider unavailable") } : {}) });
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: failure ? "GENERATION_FAILED" : "QUALITY_REJECTED" });
+    expect(generateContent).toHaveBeenCalledTimes(4);
+  });
+
+  it("rejects a final length giveaway even when the original draft was acceptable", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    const refined = { ...candidate, options: candidate.options.map((option, index) => index === 0 ? { ...option, text: "Arrange an immediate comprehensive assessment for reperfusion with the appropriate cardiology service" } : option) };
+    reviewProvider([candidate], { refined });
+    await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
   });
 
   it("does not count an internal signature-only edit as changed question content", async () => {
@@ -442,7 +620,7 @@ describe("question generation safeguards", () => {
     reviewProvider([candidate], { refined: { ...candidate, vignetteSignature: "different-internal-signature" } });
     const events: { data: unknown }[] = [];
     await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
-    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_unchanged", changed: false });
+    expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
   });
 
   it("passes reviewer failure diagnostics to the final editor", async () => {
@@ -452,16 +630,16 @@ describe("question generation safeguards", () => {
     const editor = JSON.parse(generateContent.mock.calls[3][0].contents);
     expect(editor.reviewFeedback.reviewFailures).toEqual(["clinical.INVALID_REVIEW", "editorial.PROVIDER_UNAVAILABLE"]);
     expect(editor.reviewFeedback.clinical).toBeNull();
-    expect(editor.reviewFeedback.editorial).toBeNull();
+    expect(editor.reviewFeedback).not.toHaveProperty("editorial");
   });
 
-  it.each([false, true])("does not recursively repair a malformed final envelope (known defect=%s)", async (knownDefect) => {
+  it.each([false, true])("does not recursively repair a malformed final question (known defect=%s)", async (knownDefect) => {
     const input = request();
     reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }], {
       malformedRefinement: true, editorial: { corrections: knownDefect ? [correctness] : [] }
     });
     if (knownDefect) await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
-    else await expect(generateQuestion(input, "test-key")).resolves.toHaveProperty("schemaVersion", 2);
+    else await expect(generateQuestion(input, "test-key")).rejects.toMatchObject({ code: "QUALITY_REJECTED" });
     expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
@@ -511,7 +689,8 @@ describe("question generation safeguards", () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
     reviewProvider([candidate], { grounding: { webSearchQueries: ["reference test-key"] } });
-    await generateQuestion(input, "test-key");
+    const events: { stage: string; data: unknown }[] = [];
+    await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
     expect(debug).toHaveBeenCalledTimes(5);
     const allRows = debug.mock.calls.map(([line]) => {
       expect(line).toMatch(/^\[question-generation:verbose\] /);
@@ -519,7 +698,15 @@ describe("question generation safeguards", () => {
       return JSON.parse(String(line).slice("[question-generation:verbose] ".length));
     });
     const rows = allRows.filter((row) => row.event === "call_result");
-    expect(allRows.find((row) => row.event === "refinement_result")).toMatchObject({ outcome: "refined_unchanged", changed: false, summary: expect.any(String) });
+    expect(rows.map((row) => row.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW", "LOW"]);
+    const calls = events.filter((event) => event.stage === "call");
+    for (const [index, stage] of ["candidate", "clinical", "editorial", "refinement"].entries()) {
+      expect(calls).toContainEqual(expect.objectContaining({ data: expect.objectContaining({
+        stage, thinkingLevel: index === 0 ? "MEDIUM" : "LOW", durationMs: expect.any(Number)
+      }) }));
+    }
+    for (const event of calls) expect(event.data).toHaveProperty("usage");
+    expect(allRows.find((row) => row.event === "refinement_result")).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
     expect(rows.map(({ stage, call, round, status }) => ({ stage, call, round, status }))).toEqual([
       { stage: "candidate", call: 1, round: 1, status: "success" },
       { stage: "clinical", call: 2, round: 1, status: "success" },
@@ -532,7 +719,7 @@ describe("question generation safeguards", () => {
     expect(rows.every((row) => row.level === "verbose" && row.event === "call_result" && row.durationMs >= 0)).toBe(true);
   });
 
-  it("supports debug level and logs malformed JSON and failed reviewers without changing fallback", async () => {
+  it("supports debug level and logs malformed JSON and failed reviewers without requiring a reviewer to succeed", async () => {
     vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "debug");
     const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
     const input = request();

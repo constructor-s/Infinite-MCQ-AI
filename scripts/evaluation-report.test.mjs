@@ -39,6 +39,14 @@ describe('offline evaluation reports', () => {
     });
   });
 
+  it('reports the enforced median threshold separately from a uniquely longest key', () => {
+    const words = (count) => Array(count).fill('word').join(' ');
+    const row = { ...item, body: { ...item.body, options: [11, 2, 9, 11, 30].map((count, i) => ({ id: 'ABCDE'[i], text: words(count) })) } };
+    expect(summarizeResults([row]).lengthSignals[0]).toMatchObject({ correctWords: 11, distractorMedianWords: 10, exceedsLengthLimit: false });
+    row.body.options[0].text = words(12);
+    expect(summarizeResults([row]).lengthSignals[0]).toMatchObject({ correctWords: 12, distractorMedianWords: 10, exceedsLengthLimit: true, uniquelyLongestKey: false });
+  });
+
   it('does not count a preserved refinement or a failed refinement as changed content', () => {
     const rows = [
       { ...item, trace: [{ stage: 'refinement', data: { changed: false, summary: 'Preserved after considering both reviews.' } },
@@ -50,6 +58,17 @@ describe('offline evaluation reports', () => {
       revisedItems: 0, initialRepairItems: 0, refinementPasses: 2,
       deliveryOutcomes: { refined_unchanged: 1, fallback: 1 }
     });
+  });
+
+  it('reports deterministic core changes and provider metrics without requiring a model summary', () => {
+    const usage = { promptTokenCount: 100, candidatesTokenCount: 80, thoughtsTokenCount: 200 };
+    const row = { ...item, durationMs: 1250, trace: [
+      { stage: 'call', data: { stage: 'candidate', call: 1, durationMs: 400, usage } },
+      { stage: 'decision', data: { accepted: true, outcome: 'refined_changed', changed: true, changedFields: ['options', 'correctIndex'] } }
+    ] };
+    expect(summarizeResults([row])).toMatchObject({ refinementSummaries: [],
+      refinementChanges: [{ id: 'one', changed: true, fields: ['options', 'correctIndex'] }],
+      timings: [{ id: 'one', durationMs: 1250, calls: [{ stage: 'candidate', durationMs: 400, usage }] }] });
   });
 
 });

@@ -2,7 +2,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { createServer, loadEnv } from "vite";
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -19,7 +19,8 @@ try {
   const review = await server.ssrLoadModule("/src/server/questionReview.ts");
   const contracts = await server.ssrLoadModule("/src/lib/contracts.ts");
   const curriculum = await server.ssrLoadModule("/src/data/curriculum.ts");
-  const { validateQuestionQuality } = await server.ssrLoadModule("/src/server/questionGeneration.ts");
+  const draftTools = await server.ssrLoadModule("/src/server/questionDraft.ts");
+  const { validateQuestionQuality, GENERATION_THINKING_LEVELS } = await server.ssrLoadModule("/src/server/questionGeneration.ts");
   const { PROMPT_VERSION } = await server.ssrLoadModule("/src/lib/blueprint.ts");
   report.promptVersion = PROMPT_VERSION;
   const question = contracts.generatedQuestionSchema.parse(fixture.question);
@@ -28,25 +29,39 @@ try {
     e.physicianActivity === tags.physicianActivity && e.careDimension === tags.careDimension && e.cognitiveTasks.includes(tags.cognitiveTask));
   if (!entry) throw Object.assign(new Error("Fixture assignment is no longer eligible"), { code: "INELIGIBLE_FIXTURE" });
   const input = contracts.generateQuestionRequestSchema.parse({ topicId: curriculum.objectiveTopicId(entry.objectiveId), blueprint: tags, enablingObjectiveId: entry.enablingObjectiveId, model, avoidSignatures: [] });
-  validateQuestionQuality(question, [], tags);
   report.original = question;
+  const draft = draftTools.readQuestionDraft(draftTools.questionCoreContent(question), tags);
+  report.draft = draftTools.questionCoreContent(draft);
+  const { optionLengthIssue } = await server.ssrLoadModule("/src/server/questionOptions.ts");
+  report.lengthIssueBefore = optionLengthIssue(draft) ?? null;
+  report.callMetrics = [];
   const ai = new GoogleGenAI({ apiKey });
   async function call(stage, contents, schema, instruction) {
+    const thinkingLevel = GENERATION_THINKING_LEVELS[stage];
     report.calls += 1;
     report.stage = stage;
-    console.log(`Review fixture ${fixture.id}: ${stage} call=${report.calls} model=${model}`);
+    console.log(`Review fixture ${fixture.id}: ${stage} call=${report.calls} model=${model} thinkingLevel=${thinkingLevel}`);
+    const startedAt = Date.now();
     const response = await ai.models.generateContent({ model, contents, config: {
       systemInstruction: instruction, responseMimeType: "application/json", responseJsonSchema: z.toJSONSchema(schema),
-      thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }, abortSignal: AbortSignal.timeout(90_000), httpOptions: { timeout: 90_000 }
+      thinkingConfig: { thinkingLevel }, abortSignal: AbortSignal.timeout(90_000), httpOptions: { timeout: 90_000 }
     } });
+    report.callMetrics.push({ stage, call: report.calls, thinkingLevel, durationMs: Date.now() - startedAt, usage: response.usageMetadata });
     return schema.parse(JSON.parse(response.text ?? ""));
   }
-  report.editorial = await call("editorial", JSON.stringify({ context: review.reviewContext(input), question, annotatedExamples: review.EDITORIAL_EXAMPLES }), review.editorialReviewSchema, review.EDITORIAL_REVIEW_INSTRUCTION);
-  report.expectedFindingDetected = report.editorial.corrections.some((finding) => finding.kind === fixture.expected.correctionKind);
-  const findings = review.reviewFindings(question, undefined, report.editorial);
-  report.refinement = await call("refinement", review.refinementPrompt(input, question, { ...findings, clinical: null, editorial: report.editorial, grounding: null, reviewFailures: ["clinical.NOT_RUN_IN_TARGETED_REPLAY"] }), review.refinementSchema, review.REFINEMENT_INSTRUCTION);
+  report.editorial = await call("editorial", JSON.stringify({ context: review.reviewContext(input), question: draft, annotatedExamples: review.EDITORIAL_EXAMPLES }), review.editorialReviewSchema, review.EDITORIAL_REVIEW_INSTRUCTION);
+  report.editorialExpectedFindingDetected = report.editorial.corrections.some((finding) => finding.kind === fixture.expected.correctionKind);
+  report.constructionLengthIssueDetected = Boolean(report.lengthIssueBefore);
+  report.expectedFindingDetected = report.editorialExpectedFindingDetected;
+  const findings = review.reviewFindings(draft, undefined, report.editorial);
+  report.reviewFeedback = { corrections: findings.corrections, advisories: findings.advisories, clinical: null, reviewFailures: ["clinical.NOT_RUN_IN_TARGETED_REPLAY"] };
+  const final = await call("refinement", review.refinementPrompt(input, draft, report.reviewFeedback), review.refinementSchema, review.REFINEMENT_INSTRUCTION);
+  report.refinement = { question: review.readRefinedQuestion(final, tags) };
+  report.lengthIssueAfter = optionLengthIssue(report.refinement.question) ?? null;
   validateQuestionQuality(report.refinement.question, [], tags);
-  report.changed = JSON.stringify({ ...question, vignetteSignature: "" }) !== JSON.stringify({ ...report.refinement.question, vignetteSignature: "" });
+  report.changedFields = review.changedQuestionFields(draft, report.refinement.question);
+  report.changed = report.changedFields.length > 0;
+  report.expectedFindingDetected = report.expectedFindingDetected || findings.corrections.some((finding) => finding.kind === fixture.expected.correctionKind);
   report.status = "completed";
   console.log(JSON.stringify({ fixtureId: fixture.id, calls: report.calls, expectedFindingDetected: report.expectedFindingDetected, changed: report.changed, output }));
 } catch (error) {

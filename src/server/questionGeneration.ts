@@ -6,7 +6,6 @@ import { sourceObjectivesById } from "./objectives.js";
 import { alignmentIssue, assignmentIsEligible, buildPrompt, SYSTEM_INSTRUCTION } from "./questionPrompts.js";
 import {
   generateQuestionRequestSchema,
-  generatedQuestionSchema,
   type ClinicalQuestion,
   type GenerateQuestionRequest,
   type GeneratedQuestion,
@@ -14,7 +13,16 @@ import {
   type OptionId
 } from "../lib/contracts.js";
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion.js";
-import { clinicalReviewSchema, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewFindings, refinementSchema, refinementPrompt, REFINEMENT_INSTRUCTION, type ClinicalReview, type EditorialReview } from "./questionReview.js";
+import { clinicalReviewSchema, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewFindings, refinementSchema, readRefinedQuestion, changedQuestionFields, refinementPrompt, REFINEMENT_INSTRUCTION, type ClinicalReview, type EditorialReview } from "./questionReview.js";
+import { questionDraftSchema, readQuestionDraft, questionCoreContent, type QuestionCore } from "./questionDraft.js";
+import { optionLengthIssue } from "./questionOptions.js";
+
+export const GENERATION_THINKING_LEVELS = Object.freeze({
+  candidate: ThinkingLevel.MEDIUM,
+  clinical: ThinkingLevel.LOW,
+  editorial: ThinkingLevel.LOW,
+  refinement: ThinkingLevel.LOW
+});
 
 export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   {
@@ -46,6 +54,8 @@ export function validateQuestionQuality(question: GeneratedQuestion, avoidSignat
   if (avoidSignatures.some((signature) => signature.toLowerCase() === question.vignetteSignature.toLowerCase())) {
     throw new GenerationError("DUPLICATE_SCENARIO", "Generated scenario duplicates a recent question", 502);
   }
+  const lengthIssue = optionLengthIssue(question);
+  if (lengthIssue) throw new GenerationError("ANSWER_LENGTH_GIVEAWAY", lengthIssue, 502);
   const correctText = question.options.find((option) => option.id === question.correctOptionId)?.text.toLowerCase() ?? "";
   for (const option of question.options) {
     if (option.id !== question.correctOptionId && correctText.length > 5 && option.hint.toLowerCase().includes(correctText)) {
@@ -58,7 +68,7 @@ export const GENERATION_DEADLINE_MS = 285_000;
 export const REVIEW_DEADLINE_MS = 90_000;
 export type GenerationTrace = {
   requestId: string;
-  stage: "candidate" | "clinical" | "editorial" | "refinement" | "validation" | "decision";
+  stage: "candidate" | "clinical" | "editorial" | "refinement" | "validation" | "decision" | "call";
   round: number;
   data: unknown;
 };
@@ -102,9 +112,10 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   };
   async function call(stage: "candidate" | "clinical" | "editorial" | "refinement", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
     callSignal.throwIfAborted();
+    const thinkingLevel = GENERATION_THINKING_LEVELS[stage];
     const callNumber = ++calls;
     const callStarted = Date.now();
-    console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} model=${input.model} started`);
+    console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} model=${input.model} thinkingLevel=${thinkingLevel} started`);
     // Race the provider so the deadline also holds if a transport ignores cancellation.
     let abortListener: () => void = () => {};
     try {
@@ -115,7 +126,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
             systemInstruction: instruction,
             responseMimeType: "application/json",
             responseJsonSchema: z.toJSONSchema(schema),
-            thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+            thinkingConfig: { thinkingLevel },
             abortSignal: callSignal,
             httpOptions: { timeout: Math.max(1, GENERATION_DEADLINE_MS - (Date.now() - startedAt)) },
             ...(stage === "clinical" ? { tools: [{ googleSearch: {} }] } : {})
@@ -127,23 +138,25 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
           if (callSignal.aborted) abortListener();
         })
       ]);
+      trace("call", round, { stage, call: callNumber, thinkingLevel, status: "success", durationMs: Date.now() - callStarted, usage: response.usageMetadata });
       if (verboseLogging) {
         const raw = response.text ?? null;
         let result: unknown = raw;
         try { if (raw !== null) result = JSON.parse(raw); } catch { /* Preserve malformed JSON for diagnosis. */ }
-        verbose({ stage, round, call: callNumber, status: "success", durationMs: Date.now() - callStarted,
+        verbose({ stage, round, call: callNumber, thinkingLevel, status: "success", durationMs: Date.now() - callStarted,
           result, usage: response.usageMetadata, finishReason: response.candidates?.[0]?.finishReason,
           grounding: response.candidates?.[0]?.groundingMetadata });
       }
       return response;
     } catch (error) {
+      trace("call", round, { stage, call: callNumber, thinkingLevel, status: "error", durationMs: Date.now() - callStarted, code: failureCode(error) });
       const status = typeof error === "object" && error !== null ? (error as { status?: unknown }).status : undefined;
-      verbose({ stage, round, call: callNumber, status: "error", durationMs: Date.now() - callStarted,
+      verbose({ stage, round, call: callNumber, thinkingLevel, status: "error", durationMs: Date.now() - callStarted,
         error: { code: failureCode(error), ...(typeof status === "number" ? { httpStatus: status } : {}) } });
       throw error;
     } finally {
       callSignal.removeEventListener("abort", abortListener);
-      console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} durationMs=${Date.now() - callStarted}`);
+      console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} thinkingLevel=${thinkingLevel} durationMs=${Date.now() - callStarted}`);
     }
   }
   const failureCode = (error: unknown): string => {
@@ -152,29 +165,57 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     if (/429|resource_exhausted|quota/i.test(error instanceof Error ? error.message : "")) return "QUOTA_EXHAUSTED";
     return "PROVIDER_UNAVAILABLE";
   };
+  const reportValidation = (stage: "candidate" | "refinement", round: number, error: z.ZodError | SyntaxError | GenerationError) => {
+    const category = error instanceof z.ZodError ? "schema" : error instanceof SyntaxError ? "json" : "quality";
+    const code = error instanceof SyntaxError ? "INVALID_JSON" : error instanceof GenerationError ? error.code
+      : stage === "candidate" ? "INVALID_GENERATED_QUESTION" : "INVALID_REFINEMENT";
+    const qualityMessages: Record<string, string> = {
+      ANSWER_LENGTH_GIVEAWAY: "The correct option exceeds the distractor-median word-count limit.",
+      BLUEPRINT_MISMATCH: "The question does not match its assigned task or prose format.",
+      DUPLICATE_SCENARIO: "The scenario duplicates a recent question.",
+      ANSWER_LEAK: "A distractor hint reveals the correct answer."
+    };
+    // Unknown property names and JSON parser errors can contain model text.
+    // Emit only known schema paths and bounded, input-free error descriptions.
+    const fields = new Set(["vignette", "stem", "options", "text", "hint", "explanation", "correctIndex", "shortExplanation", "highYieldPearl", "vignetteSignature", "blueprint", "correctOptionId"]);
+    const source = error instanceof z.ZodError ? error.issues : [{ path: [], code,
+      message: error instanceof SyntaxError ? "Response is not valid JSON." : qualityMessages[code] ?? "Question failed an application validation check." }];
+    const issues = source.slice(0, 10).map((issue) => ({
+      path: issue.path.slice(0, 8).map((part) => typeof part === "number" ? part : typeof part === "string" && fields.has(part) ? part : "[field]"),
+      code: issue.code,
+      message: (issue.code === "unrecognized_keys" ? "Unexpected fields in structured response."
+        : issue.code === "invalid_value" ? "Field is outside the allowed values."
+        : issue.code === "invalid_union" ? "Field does not match an allowed type."
+        : issue.message).replaceAll(apiKey, "[REDACTED]").replace(/[\r\n\t]/g, " ").slice(0, 240)
+    }));
+    const line = JSON.stringify({ requestId, stage, category, code, issues, issueCount: source.length, truncated: source.length > issues.length }).replaceAll(apiKey, "[REDACTED]");
+    console.warn(`[question-generation:validation] ${line}`);
+    trace("validation", round, JSON.parse(line));
+  };
   let candidateCalls = 0;
-  async function candidate(): Promise<GeneratedQuestion> {
+  async function candidate(): Promise<QuestionCore> {
     candidateCalls += 1;
-    const response = await call("candidate", candidateCalls, makePrompt(input, feedback, previousDraft), generatedQuestionSchema, SYSTEM_INSTRUCTION);
+    const response = await call("candidate", candidateCalls, makePrompt(input, feedback, previousDraft), questionDraftSchema, SYSTEM_INSTRUCTION);
     previousDraft = response.text?.slice(0, 40_000) ?? "";
     try {
-      const parsed = generatedQuestionSchema.parse(JSON.parse(response.text ?? ""));
-      previousDraft = parsed;
+      const parsed = readQuestionDraft(JSON.parse(response.text ?? ""), input.blueprint);
+      previousDraft = questionCoreContent(parsed);
       trace("candidate", candidateCalls, parsed);
-      validateQuestionQuality(parsed, input.avoidSignatures, input.blueprint);
+      const issue = alignmentIssue(parsed, input.blueprint);
+      if (issue) throw new GenerationError("BLUEPRINT_MISMATCH", issue, 502);
       return parsed;
     } catch (error) {
       if (!(error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError)) throw error;
       feedback = error instanceof z.ZodError
         ? { structuralErrors: error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ").slice(0, 3000) }
         : { structuralErrors: error instanceof SyntaxError ? "Return valid JSON matching the question schema." : (error as Error).message };
-      trace("validation", candidateCalls, feedback);
+      reportValidation("candidate", candidateCalls, error);
       lastError = error instanceof GenerationError ? error : new GenerationError("INVALID_GENERATED_QUESTION", "Generated question did not match its schema", 502);
       throw lastError;
     }
   }
   try {
-    let parsed: GeneratedQuestion;
+    let parsed: QuestionCore;
     try { parsed = await candidate(); }
     catch (error) {
       // Only structural validation gets one repair. Provider errors are real
@@ -222,51 +263,46 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     const refinementRound = candidateCalls + 1;
     const reviewFeedback = {
       corrections: findings.corrections, advisories: findings.advisories,
-      clinical: clinical ?? null, editorial: editorial ?? null, grounding: grounding ?? null, reviewFailures
+      clinical: clinical ? { answerId: clinical.answerId, strongestDistractorId: clinical.strongestDistractorId, decisiveCaseFact: clinical.decisiveCaseFact } : null,
+      reviewFailures
     };
     trace("decision", candidateCalls, { accepted: false, outcome: "refinement_requested", issues, advisories: findings.advisories, reviewFailures, calls });
-    let outcome: "refined_changed" | "refined_unchanged" | "fallback";
-    let refinementFailure: string | undefined;
-    let refinementSummary: string;
-    let changed = false;
+    let final: GeneratedQuestion;
+    let changedFields: ReturnType<typeof changedQuestionFields>;
     try {
       const response = await call("refinement", refinementRound, refinementPrompt(input, original, reviewFeedback), refinementSchema, REFINEMENT_INSTRUCTION);
-      const refined = refinementSchema.parse(JSON.parse(response.text ?? ""));
-      validateQuestionQuality(refined.question, input.avoidSignatures, input.blueprint);
-      parsed = refined.question;
-      // Compare validated content, not the model's self-assessment or an internal
-      // scenario signature. Both objects have the same schema-defined key order.
-      changed = JSON.stringify({ ...parsed, vignetteSignature: "" }) !== JSON.stringify({ ...original, vignetteSignature: "" });
-      outcome = changed ? "refined_changed" : "refined_unchanged";
-      refinementSummary = refined.summary;
-      trace("refinement", refinementRound, { question: parsed, summary: refinementSummary, changed });
+      final = readRefinedQuestion(JSON.parse(response.text ?? ""), input.blueprint);
+      validateQuestionQuality(final, input.avoidSignatures, input.blueprint);
+      changedFields = changedQuestionFields(original, final);
+      trace("refinement", refinementRound, { question: final, changed: changedFields.length > 0, changedFields });
     } catch (error) {
       if (signal.aborted) throw error;
-      refinementFailure = error instanceof z.ZodError || error instanceof SyntaxError ? "INVALID_REFINEMENT" : failureCode(error);
-      if (findings.hasCorrectnessDefect) {
-        refinementSummary = "Final refinement failed; the original draft has a demonstrated correctness defect and was not delivered.";
-        trace("refinement", refinementRound, { unavailable: true, code: refinementFailure, summary: refinementSummary });
-        trace("decision", refinementRound, { accepted: false, outcome: "rejected_correctness", issues: [], refinementFailure, refinementSummary, reviewFailures, calls });
-        verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome: "rejected_correctness", summary: refinementSummary, refinementFailure, calls });
-        throw new GenerationError("QUALITY_REJECTED", "Unable to refine a demonstrated question defect", 502);
+      if (error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError) {
+        reportValidation("refinement", refinementRound, error);
       }
-      parsed = original;
-      outcome = "fallback";
-      refinementSummary = "Final refinement failed; retained the valid original draft because no completed review identified a demonstrated correctness defect.";
-      trace("refinement", refinementRound, { unavailable: true, code: refinementFailure, summary: refinementSummary, changed: false });
-      console.warn(`[question-generation] requestId=${requestId} refinementFailed=${refinementFailure} delivering original valid draft`);
+      const refinementFailure = error instanceof z.ZodError || error instanceof SyntaxError ? "INVALID_REFINEMENT" : failureCode(error);
+      trace("refinement", refinementRound, { unavailable: true, code: refinementFailure });
+      trace("decision", refinementRound, { accepted: false, outcome: "rejected_refinement", issues, refinementFailure, reviewFailures, calls });
+      verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome: "rejected_refinement", refinementFailure, calls });
+      // The lean draft cannot be delivered: it has no final teaching content.
+      // Preserve provider errors for the normal quota/transport handling below.
+      if (error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError) {
+        throw new GenerationError("QUALITY_REJECTED", "Unable to produce a complete valid final question", 502);
+      }
+      throw error;
     }
     signal.throwIfAborted();
-    verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome, changed, summary: refinementSummary, refinementFailure, calls });
+    const changed = changedFields.length > 0;
+    const outcome = changed ? "refined_changed" : "refined_unchanged";
+    verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome, changed, changedFields, calls });
     trace("decision", refinementRound, {
       accepted: true, outcome, issues: [], advisories: findings.advisories,
-      unresolvedSuggestions: outcome === "fallback" ? issues : [],
-      reviewIncomplete: reviewFailures.length > 0, reviewFailures, refinementFailure,
-      refinementSummary, changed, initialCandidateCalls: candidateCalls, calls
+      reviewIncomplete: reviewFailures.length > 0, reviewFailures,
+      changed, changedFields, initialCandidateCalls: candidateCalls, calls
     });
     console.info(`[question-generation] requestId=${requestId} delivered outcome=${outcome} reviewIncomplete=${reviewFailures.length > 0} advisories=${findings.advisories.length} initialCandidates=${candidateCalls} calls=${calls} durationMs=${Date.now() - startedAt}`);
     return {
-      ...shuffleQuestionOptions(parsed), id: crypto.randomUUID(), topicId: input.topicId,
+      ...shuffleQuestionOptions(final), id: crypto.randomUUID(), topicId: input.topicId,
       topicTitle: objective.title, category: input.blueprint.discipline, model: input.model,
       generatedAt: new Date().toISOString(), schemaVersion: 2, blueprintVersion: blueprint.version,
       curriculumVersion, crosswalkVersion, promptVersion: PROMPT_VERSION,

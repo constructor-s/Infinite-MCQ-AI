@@ -35,14 +35,15 @@ describe("lenient review findings", () => {
     expect(reviewFindings(makeQuestion(), parsed, editorial).corrections).toEqual([]);
   });
 
-  it("keeps positive length/clinical controls and a communication competitor example in editorial context", () => {
+  it("keeps compact semantic near-miss calibration in editorial context", () => {
     // These check calibration context delivery, not the model's medical judgments.
     expect(EDITORIAL_EXAMPLES).toEqual(expect.arrayContaining([
-      expect.objectContaining({ criterion: "noAnswerGiveaways", verdict: "pass", reason: expect.stringContaining("Necessary length variation") }),
+      expect.objectContaining({ criterion: "strongDistractor", verdict: "pass", reason: expect.stringContaining("One changed decision rule") }),
       expect.objectContaining({ criterion: "strongDistractor", verdict: "pass", reason: expect.stringContaining("recognizable interpretation error") }),
       expect.objectContaining({ criterion: "strongDistractor", verdict: "pass", material: expect.stringContaining("hourly wages") })
     ]));
     expect(EDITORIAL_REVIEW_INSTRUCTION).toContain("as if the vignette were hidden");
+    expect(EDITORIAL_REVIEW_INSTRUCTION).toContain("do not spend review findings on length arithmetic");
     for (const instruction of [EDITORIAL_REVIEW_INSTRUCTION, CLINICAL_REVIEW_INSTRUCTION]) {
       expect(instruction).toContain("Return empty corrections and advisories");
       expect(instruction).toContain("Do not put praise");
