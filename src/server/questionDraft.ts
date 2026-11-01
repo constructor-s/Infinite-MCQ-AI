@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { generatedQuestionSchema, type GeneratedQuestion, type OptionId } from "../lib/contracts.js";
+import { shuffleValues } from "../lib/shuffleQuestion.js";
 import type { BlueprintTags } from "../lib/blueprint.js";
 
 const optionIds: OptionId[] = ["A", "B", "C", "D", "E"];
-const correctIndexSchema = z.number().int().min(0).max(4);
 const { vignette, stem, shortExplanation, highYieldPearl, vignetteSignature } = generatedQuestionSchema.shape;
 const optionText = generatedQuestionSchema.shape.options.element.shape.text;
 const optionHint = generatedQuestionSchema.shape.options.element.shape.hint;
@@ -11,63 +11,56 @@ const optionExplanation = generatedQuestionSchema.shape.options.element.shape.ex
 
 function uniqueTexts(texts: string[], ctx: z.RefinementCtx) {
   if (new Set(texts.map((text) => text.trim().toLowerCase())).size !== texts.length) {
-    ctx.addIssue({ code: "custom", path: ["options"], message: "Option text must be unique" });
+    ctx.addIssue({ code: "custom", path: ["distractors"], message: "Option text must be unique" });
   }
 }
 
 export const questionDraftSchema = z.object({
-  vignette, stem, options: z.array(optionText).length(5), correctIndex: correctIndexSchema
-}).strict().superRefine((draft, ctx) => uniqueTexts(draft.options, ctx));
+  vignette, stem, correctAnswer: optionText, distractors: z.array(optionText).length(4)
+}).strict().superRefine((draft, ctx) => uniqueTexts([draft.correctAnswer, ...draft.distractors], ctx));
 export type QuestionDraft = z.infer<typeof questionDraftSchema>;
-export type QuestionCore = Pick<GeneratedQuestion, "vignette" | "stem" | "blueprint" | "correctOptionId"> & {
-  options: { id: OptionId; text: string }[];
-};
-
-export function readQuestionDraft(value: unknown, blueprint: BlueprintTags): QuestionCore {
-  const draft = questionDraftSchema.parse(value);
-  return { vignette: draft.vignette, stem: draft.stem, blueprint,
-    options: draft.options.map((text, index) => ({ id: optionIds[index], text })), correctOptionId: optionIds[draft.correctIndex] };
+export function readQuestionDraft(value: unknown): QuestionDraft {
+  return questionDraftSchema.parse(value);
 }
 
-export function questionCoreContent(question: QuestionCore): QuestionDraft {
-  return { vignette: question.vignette, stem: question.stem, options: question.options.map(({ text }) => text),
-    correctIndex: question.options.findIndex(({ id }) => id === question.correctOptionId) };
+export function questionCoreContent(question: QuestionDraft | RefinedQuestion): QuestionDraft {
+  return { vignette: question.vignette, stem: question.stem,
+    correctAnswer: typeof question.correctAnswer === "string" ? question.correctAnswer : question.correctAnswer.text,
+    distractors: question.distractors.map((option) => typeof option === "string" ? option : option.text) };
 }
 
-// Teaching is written once against the final choices. Correct-choice teaching
-// comes from shortExplanation; harmless provider placeholders are ignored.
-// The provider's flat option array cannot express which index needs teaching,
-// so role-dependent required/length checks remain in the application validator.
+// Teaching is required directly by each answer role in the provider schema.
 export const refinementSchema = z.object({
   vignette, stem,
-  options: z.array(z.object({ text: optionText, hint: z.string().nullish(), explanation: z.string().nullish() }).strict()).length(5),
-  correctIndex: correctIndexSchema, shortExplanation, highYieldPearl, vignetteSignature
+  correctAnswer: z.object({ text: optionText, explanation: shortExplanation }).strict(),
+  distractors: z.array(z.object({ text: optionText, hint: optionHint, explanation: optionExplanation }).strict()).length(4),
+  highYieldPearl, vignetteSignature
 }).strict().superRefine((question, ctx) => {
-  uniqueTexts(question.options.map(({ text }) => text), ctx);
-  question.options.forEach((option, index) => {
-    if (index === question.correctIndex) return;
-    for (const field of ["hint", "explanation"] as const) {
-      const teachingSchema = field === "hint" ? optionHint : optionExplanation;
-      if (!teachingSchema.safeParse(option[field]).success) {
-        ctx.addIssue({ code: "custom", path: ["options", index, field], message: `Each distractor requires a valid ${field} of at least 15 characters` });
-      }
-    }
-  });
+  uniqueTexts([question.correctAnswer.text, ...question.distractors.map(({ text }) => text)], ctx);
 });
 
-export function readRefinedQuestion(value: unknown, blueprint: BlueprintTags): GeneratedQuestion {
-  const final = refinementSchema.parse(value);
+export type RefinedQuestion = z.infer<typeof refinementSchema>;
+
+export function readRefinedQuestion(value: unknown): RefinedQuestion {
+  return refinementSchema.parse(value);
+}
+
+/** The only generation boundary that adds option IDs for storage/display. */
+export function toGeneratedQuestion(final: RefinedQuestion, blueprint: BlueprintTags, random: () => number = Math.random): GeneratedQuestion {
+  const choices = shuffleValues([
+    { text: final.correctAnswer.text, hint: "Consider how the case findings support this choice.", explanation: final.correctAnswer.explanation },
+    ...final.distractors
+  ], random);
   return generatedQuestionSchema.parse({
     vignette: final.vignette, stem: final.stem, blueprint,
-    options: final.options.map((option, index) => ({ id: optionIds[index], text: option.text,
-      hint: index === final.correctIndex ? "Consider how the case findings support this choice." : option.hint,
-      explanation: index === final.correctIndex ? final.shortExplanation : option.explanation })),
-    correctOptionId: optionIds[final.correctIndex], shortExplanation: final.shortExplanation,
+    options: choices.map((option, index) => ({ ...option, id: optionIds[index] })),
+    correctOptionId: optionIds[choices.findIndex(({ text }) => text === final.correctAnswer.text)],
+    shortExplanation: final.correctAnswer.explanation,
     highYieldPearl: final.highYieldPearl, vignetteSignature: final.vignetteSignature
   });
 }
 
-export function changedQuestionFields(original: QuestionCore, final: QuestionCore): (keyof QuestionDraft)[] {
+export function changedQuestionFields(original: QuestionDraft, final: QuestionDraft | RefinedQuestion): (keyof QuestionDraft)[] {
   const before = questionCoreContent(original);
   const after = questionCoreContent(final);
   return (Object.keys(before) as (keyof QuestionDraft)[]).filter((field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]));

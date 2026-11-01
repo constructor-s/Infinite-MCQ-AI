@@ -30,7 +30,9 @@ try {
   if (!entry) throw Object.assign(new Error("Fixture assignment is no longer eligible"), { code: "INELIGIBLE_FIXTURE" });
   const input = contracts.generateQuestionRequestSchema.parse({ topicId: curriculum.objectiveTopicId(entry.objectiveId), blueprint: tags, enablingObjectiveId: entry.enablingObjectiveId, model, avoidSignatures: [] });
   report.original = question;
-  const draft = draftTools.readQuestionDraft(draftTools.questionCoreContent(question), tags);
+  const draft = draftTools.readQuestionDraft({ vignette: question.vignette, stem: question.stem,
+    correctAnswer: question.options.find(({ id }) => id === question.correctOptionId).text,
+    distractors: question.options.filter(({ id }) => id !== question.correctOptionId).map(({ text }) => text) });
   report.draft = draftTools.questionCoreContent(draft);
   const { optionLengthIssue } = await server.ssrLoadModule("/src/server/questionOptions.ts");
   report.lengthIssueBefore = optionLengthIssue(draft) ?? null;
@@ -56,8 +58,8 @@ try {
   const findings = review.reviewFindings(draft, undefined, report.editorial);
   report.reviewFeedback = { corrections: findings.corrections, advisories: findings.advisories, clinical: null, reviewFailures: ["clinical.NOT_RUN_IN_TARGETED_REPLAY"] };
   const final = await call("refinement", review.refinementPrompt(input, draft, report.reviewFeedback), review.refinementSchema, review.REFINEMENT_INSTRUCTION);
-  report.refinement = { question: review.readRefinedQuestion(final, tags) };
-  report.lengthIssueAfter = optionLengthIssue(report.refinement.question) ?? null;
+  report.refinement = { question: review.readRefinedQuestion(final) };
+  report.lengthIssueAfter = optionLengthIssue(draftTools.questionCoreContent(report.refinement.question)) ?? null;
   validateQuestionQuality(report.refinement.question, [], tags);
   report.changedFields = review.changedQuestionFields(draft, report.refinement.question);
   report.changed = report.changedFields.length > 0;

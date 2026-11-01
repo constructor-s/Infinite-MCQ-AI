@@ -64,10 +64,10 @@ describe('offline evaluation reports', () => {
     const usage = { promptTokenCount: 100, candidatesTokenCount: 80, thoughtsTokenCount: 200 };
     const row = { ...item, durationMs: 1250, trace: [
       { stage: 'call', data: { stage: 'candidate', call: 1, durationMs: 400, usage } },
-      { stage: 'decision', data: { accepted: true, outcome: 'refined_changed', changed: true, changedFields: ['options', 'correctIndex'] } }
+      { stage: 'decision', data: { accepted: true, outcome: 'refined_changed', changed: true, changedFields: ['correctAnswer', 'distractors'] } }
     ] };
     expect(summarizeResults([row])).toMatchObject({ refinementSummaries: [],
-      refinementChanges: [{ id: 'one', changed: true, fields: ['options', 'correctIndex'] }],
+      refinementChanges: [{ id: 'one', changed: true, fields: ['correctAnswer', 'distractors'] }],
       timings: [{ id: 'one', durationMs: 1250, calls: [{ stage: 'candidate', durationMs: 400, usage }] }] });
   });
 
