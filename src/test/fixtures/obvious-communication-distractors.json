@@ -1,0 +1,63 @@
+{
+  "id": "supportive-answer-versus-obvious-alternatives",
+  "provenance": {
+    "source": "User-supplied generation log f85c562b-d4be-4f7e-b131-dcfc2e29f1fd",
+    "evaluationScope": "Wording and distractor construction only; clinical and legal content are not validated.",
+    "clinicalReviewStatus": "not_reviewed",
+    "legalReviewStatus": "not_reviewed",
+    "usage": "Offline regression/calibration only. Never inject this full draft into generation prompts."
+  },
+  "question": {
+    "vignette": "A 28-year-old woman presents to the emergency department accompanied by her partner, reporting a three-day history of acute worsening anxiety, insomnia, and right-sided rib pain following a violent altercation at home. Physical examination reveals localized tenderness over the right lower ribs and multiple contusions in various stages of healing on her forearms. While the partner briefly leaves the examination room, the patient discloses a pattern of severe psychological intimidation, financial control, and physical abuse. She states she wants to leave but is paralyzed by fear because her temporary work permit is legally sponsored by her partner, leading her to believe that separating will immediately result in deportation and destitution.",
+    "blueprint": {
+      "discipline": "phelo",
+      "physicianActivity": "communication",
+      "careDimension": "acute",
+      "cognitiveTask": "treatment_barriers",
+      "mccObjectiveIds": [
+        "114-3"
+      ]
+    },
+    "stem": "Which of the following communication strategies best addresses this patient's specific practical and legal barrier to accessing safety?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Contact border services immediately to verify her current visa status and clarify whether she faces deportation.",
+        "hint": "Think about patient trust, confidentiality, and the potential risks of contacting immigration enforcement directly.",
+        "explanation": "Incorrect because directly involving immigration enforcement can severely compromise the patient's trust, escalate her fears of deportation, and increase immediate physical danger."
+      },
+      {
+        "id": "B",
+        "text": "Acknowledge her fears regarding residency status with empathy and connect her with specialized legal clinics experienced in vulnerable temporary resident protections.",
+        "hint": "Consider how addressing specific legal and practical fears with appropriate community resources supports safe decision-making.",
+        "explanation": "Correct because this approach validates her genuine fears without blame or assumptions, providing accurate guidance regarding specialized legal supports for temporary residents."
+      },
+      {
+        "id": "C",
+        "text": "Reassure her that domestic violence victims automatically receive permanent residency upon leaving, and insist on filing a police report today.",
+        "hint": "Evaluate whether guarantees of automatic residency are legally accurate and if rigid demands override patient autonomy.",
+        "explanation": "Incorrect because promising automatic permanent residency is legally incorrect and giving rigid ultimatums about police reports disregards the patient's immediate safety assessment."
+      },
+      {
+        "id": "D",
+        "text": "Suggest that she independently secure local employment and financial independence before attempting to access emergency shelter services.",
+        "hint": "Reflect on whether expecting an economically controlled and isolated individual to independently secure employment solves an acute crisis.",
+        "explanation": "Incorrect because it minimizes the acute danger and practical barriers of severe economic control and isolation, placing an unrealistic burden on the patient."
+      },
+      {
+        "id": "E",
+        "text": "Confront her partner regarding immigration sponsorship laws to deter further control while maintaining their current shared living arrangement.",
+        "hint": "Consider the safety implications and breaches of confidentiality involved in confronting an abusive partner directly in this setting.",
+        "explanation": "Incorrect because confronting the abuser without explicit consent compromises patient confidentiality, violates safety planning principles, and significantly increases the risk of severe retaliatory violence."
+      }
+    ],
+    "correctOptionId": "B",
+    "shortExplanation": "The decisive distinction is that option B addresses the patient's specific immigration and legal barrier with accurate community resources and empathy, whereas the other options provide false legal information, place blame, escalate risk, or mishandle confidentiality.",
+    "highYieldPearl": "When managing patients experiencing abuse who face immigration or sponsorship barriers, clinicians should validate fears without judgment and connect them with specialized legal and advocacy services familiar with protections for vulnerable temporary residents.",
+    "vignetteSignature": "IPV_Immigration_Barrier_2024"
+  },
+  "expected": {
+    "correctionKind": "answer_giveaway",
+    "reason": "Four conspicuously inappropriate responses contrast with the only supportive response. The intended key can be inferred from wording."
+  }
+}

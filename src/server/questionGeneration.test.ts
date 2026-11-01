@@ -8,6 +8,7 @@ import { eligibility } from "../data/curriculum";
 import { sourceObjectivesById } from "./objectives";
 import { assignmentIsEligible, alignmentIssue } from "./questionPrompts";
 import { type ClinicalReview, type EditorialReview } from "./questionReview";
+import distractorRegression from "../test/fixtures/obvious-communication-distractors.json";
 import exemplars from "../../curriculum/exemplars.json";
 
 const { generateContent } = vi.hoisted(() => ({ generateContent: vi.fn() }));
@@ -56,7 +57,7 @@ function reviewProvider(candidates: GeneratedQuestion[], options: ReviewOptions 
     if (override === "unavailable") throw new Error("Reviewer unavailable");
     if (override === "malformed") return { text: "{}" };
     if (prompt.annotatedExamples) {
-      return { text: JSON.stringify({ corrections: [], advisories: ["One sentence could be shorter."], ...override }) };
+      return { text: JSON.stringify({ corrections: [], advisories: ["Shorten the vignette's opening sentence without removing decisive findings."], ...override }) };
     }
     const candidate = candidates[Math.min(round - 1, candidates.length - 1)];
     const answerText = candidate.options.find((o) => o.id === candidate.correctOptionId)!.text;
@@ -361,6 +362,39 @@ describe("question generation safeguards", () => {
     expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
+  it("routes the supplied wording-regression finding and advisory into a consistent final distractor edit", async () => {
+    // This fixture labels construction only; it does not certify its legal or clinical content.
+    expect(distractorRegression.provenance.clinicalReviewStatus).toBe("not_reviewed");
+    expect(distractorRegression.provenance.legalReviewStatus).toBe("not_reviewed");
+    const candidate = generatedQuestionSchema.parse(distractorRegression.question);
+    const entry = eligibility.find((e) => e.objectiveId === candidate.blueprint.mccObjectiveIds[0] &&
+      e.discipline === candidate.blueprint.discipline && e.physicianActivity === candidate.blueprint.physicianActivity &&
+      e.careDimension === candidate.blueprint.careDimension && e.cognitiveTasks.includes(candidate.blueprint.cognitiveTask))!;
+    const input = { ...request(), topicId: `mcc.${entry.objectiveId}`, blueprint: candidate.blueprint, enablingObjectiveId: entry.enablingObjectiveId };
+    const correction = { kind: "answer_giveaway" as const,
+      evidence: "Four obviously inappropriate responses contrast with the sole supportive legal-resource response.",
+      correction: "Replace the employment-before-shelter filler with a respectful competing support response and keep one best answer." };
+    const advisory = "For the employment-before-shelter option, use a respectful housing/income-support response so the vignette is needed to distinguish it from legal-resource support.";
+    const replacement = {
+      id: "D" as const,
+      text: "Acknowledge her financial concerns and offer a social work consultation focused on emergency housing and income support.",
+      hint: "Distinguish immediate housing and income support from advice about immigration status.",
+      explanation: "Housing and income support may address economic barriers, but this response does not directly address the patient's specific fear about immigration status."
+    };
+    const refined = { ...candidate, options: candidate.options.map((o) => o.id === "D" ? replacement : o),
+      shortExplanation: "Specialized legal support directly addresses the patient's stated immigration concern; housing and income support alone address a different part of her practical barriers." };
+    reviewProvider([candidate], { editorial: { corrections: [correction], advisories: [advisory] }, refined,
+      refinementSummary: "Replaced the employment-before-shelter filler with a respectful competing response and updated its hint and explanation." });
+    const result = await generateQuestion(input, "test-key");
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    const editor = JSON.parse(generateContent.mock.calls[3][0].contents);
+    expect(editor.reviewFeedback.corrections).toContainEqual({ ...correction, reviewer: "editorial" });
+    expect(editor.reviewFeedback.advisories).toContain(advisory);
+    expect(result.options.find((o) => o.text === replacement.text)).toMatchObject({ text: replacement.text, hint: replacement.hint, explanation: replacement.explanation });
+    expect(result.correctOptionId).toBe(result.options.find((o) => o.text === candidate.options.find((o) => o.id === candidate.correctOptionId)!.text)!.id);
+    expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
+  });
+
   it("passes every advisory to the final editor even without correction requests", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
@@ -385,6 +419,10 @@ describe("question generation safeguards", () => {
     expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
     expect(result).not.toHaveProperty("summary");
     expect(result).not.toHaveProperty("question");
+    const finalCall = generateContent.mock.calls[3][0];
+    expect(JSON.parse(finalCall.contents).reviewFeedback.advisories).toEqual([]);
+    expect(finalCall.config.systemInstruction).toContain("Independently audit the actual draft");
+    expect(finalCall.config.systemInstruction).toContain("reviewer agreement is not proof of quality");
   });
 
   it("determines changed content from validated output rather than the refinement summary", async () => {
