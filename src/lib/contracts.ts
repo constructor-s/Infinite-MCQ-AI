@@ -28,7 +28,6 @@ const questionFieldsSchema = z.object({
     explanation: z.string().min(15)
   })).length(5),
   correctOptionId: optionIdSchema,
-  shortExplanation: z.string().min(25),
   highYieldPearl: z.string().min(15),
   vignetteSignature: z.string().min(8).max(120)
 });

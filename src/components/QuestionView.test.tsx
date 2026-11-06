@@ -41,6 +41,14 @@ describe("QuestionView", () => {
     const onNext = vi.fn();
     render(<QuestionView question={question} encounter={makeEncounter({ selectedOptionIds: ["A"], eventuallyCorrect: true, completedAt: new Date().toISOString() })} mode="fresh" busy={false} {...viewHandlers()} onNext={onNext} />);
     expect(screen.getByText("Answer: A")).toBeInTheDocument();
+    expect(screen.getByText(question.highYieldPearl, { exact: false })).toBeInTheDocument();
+    const details = screen.getByText("Review all answer options").closest("details")!;
+    expect(details).not.toHaveAttribute("open");
+    for (const option of question.options) {
+      const explanations = screen.getAllByText(option.explanation);
+      expect(explanations).toHaveLength(1);
+      expect(details).toContainElement(explanations[0]);
+    }
     expect(screen.getByRole("button", { name: "Good question" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Ask about this question" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next question" }));

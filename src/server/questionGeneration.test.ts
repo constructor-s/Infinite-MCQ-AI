@@ -11,6 +11,7 @@ import { questionDraftSchema, questionCoreContent, readQuestionDraft } from "./q
 import { optionLengthIssue } from "./questionOptions";
 import { assignmentIsEligible, alignmentIssue } from "./questionPrompts";
 import { type ClinicalReview, type EditorialReview } from "./questionReview";
+import { answerQuestionFollowUp } from "./questionFollowUp";
 import lengthRegression from "../test/fixtures/long-capacity-answer.json";
 import distractorRegression from "../test/fixtures/obvious-communication-distractors.json";
 import exemplars from "../../curriculum/exemplars.json";
@@ -79,6 +80,41 @@ function reviewProvider(candidates: GeneratedQuestion[], options: ReviewOptions 
 }
 
 describe("question generation safeguards", () => {
+  it.each(["gemini-3.5-flash-lite", "gemini-3.8-flash"] as const)("offers optional code execution outside editorial review for %s", async (model) => {
+    const input = { ...request(), model };
+    reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }]);
+    await generateQuestion(input, "test-key");
+    expect(generateContent).toHaveBeenCalledTimes(4);
+    expect(generateContent.mock.calls.map(([arg]) => arg.model)).toEqual([model, model, model, model]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.tools)).toEqual([
+      [{ codeExecution: {} }],
+      [{ googleSearch: {} }, { codeExecution: {} }],
+      undefined,
+      [{ codeExecution: {} }]
+    ]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW", "LOW"]);
+  });
+
+  it("sends each option explanation once in follow-up context", async () => {
+    const question = makeQuestion();
+    generateContent.mockResolvedValue({ text: "A concise answer." });
+    await answerQuestionFollowUp({ question: { ...question, shortExplanation: question.options[0].explanation }, messages: [{ role: "user", text: "Why?" }] }, "test-key");
+    const text = generateContent.mock.calls[0][0].contents[0].parts[0].text;
+    const context = JSON.parse(text.slice(text.indexOf("\n") + 1));
+    expect(context).not.toHaveProperty("rationale");
+    expect(context).not.toHaveProperty("shortExplanation");
+    expect(context.options).toEqual(question.options.map(({ id, text, explanation }) => ({ id, text, explanation })));
+  });
+
+  it.each(["gemini-3.5-flash-lite", "gemini-3.8-flash"] as const)("offers code execution for follow-ups with %s without changing other options", async (model) => {
+    generateContent.mockResolvedValue({ text: "The calculated risk is 10%." });
+    const result = await answerQuestionFollowUp({ question: { ...makeQuestion(), model }, messages: [{ role: "user", text: "How is the risk calculated?" }] }, "test-key");
+    expect(result).toBe("The calculated risk is 10%.");
+    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent.mock.calls[0][0]).toMatchObject({ model, config: { tools: [{ codeExecution: {} }], temperature: 0.3, maxOutputTokens: 700 } });
+    expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("thinkingConfig");
+  });
+
   it("grounds the prompt in the exact eligible task and enabling objective", () => {
     const entry = eligibility.find((e) => e.objectiveId === "14" && e.physicianActivity === "management")!;
     const input = { topicId: "mcc.14", blueprint: { discipline: entry.discipline, physicianActivity: entry.physicianActivity, careDimension: entry.careDimension, cognitiveTask: entry.cognitiveTasks[0], mccObjectiveIds: ["14"] }, enablingObjectiveId: entry.enablingObjectiveId, model: "gemini-3.5-flash-lite" as const, avoidSignatures: [] };
@@ -186,7 +222,7 @@ describe("question generation safeguards", () => {
 
   it("rejects an explanation admitting that an answer was forced to fit the task", () => {
     const question = generated();
-    question.shortExplanation = "Antibiotics are the main treatment. However, options must reflect procedural interventions, so choose a procedure.";
+    question.options.find(({ id }) => id === question.correctOptionId)!.explanation = "Antibiotics are the main treatment. However, options must reflect procedural interventions, so choose a procedure.";
     expect(() => validateQuestionQuality(question, [])).toThrow(/forces the answer/);
   });
 
@@ -255,7 +291,7 @@ describe("question generation safeguards", () => {
     expect(Object.keys(clinical.question).sort()).toEqual(["options", "stem", "vignette"]);
     expect(clinical).not.toHaveProperty("annotatedExamples");
     expect(clinical.question.options.every((o: unknown) => typeof o === "string")).toBe(true);
-    expect(clinicalCall[0].config.tools).toEqual([{ googleSearch: {} }]);
+    expect(clinicalCall[0].config.tools).toEqual([{ googleSearch: {} }, { codeExecution: {} }]);
     const editorialCall = generateContent.mock.calls.find(([arg]) => JSON.parse(arg.contents).annotatedExamples)!;
     expect(editorialCall[0].config.tools).toBeUndefined();
     const editorQuestion = JSON.parse(editorialCall[0].contents).question;
@@ -393,7 +429,8 @@ describe("question generation safeguards", () => {
     reviewProvider([candidate], { rawRefined: raw });
     const result = await generateQuestion(input, "test-key");
     const correct = result.options.find((option) => option.id === result.correctOptionId)!;
-    expect(correct.explanation).toBe(candidate.shortExplanation);
+    expect(result).not.toHaveProperty("shortExplanation");
+    expect(correct.explanation).toBe(finalContent(candidate).correctAnswer.explanation);
     expect(correct.hint).toBe("Consider how the case findings support this choice.");
     expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
     expect(generateContent).toHaveBeenCalledTimes(4);
@@ -529,8 +566,7 @@ describe("question generation safeguards", () => {
       hint: "Distinguish immediate housing and income support from advice about immigration status.",
       explanation: "Housing and income support may address economic barriers, but this response does not directly address the patient's specific fear about immigration status."
     };
-    const refined = { ...candidate, options: candidate.options.map((o) => o.id === "D" ? replacement : o.id === candidate.correctOptionId ? { ...o, text: "Acknowledge her concerns and offer confidential specialist legal advice about immigration status and safe access to support." } : o),
-      shortExplanation: "Specialized legal support directly addresses the patient's stated immigration concern; housing and income support alone address a different part of her practical barriers." };
+    const refined = { ...candidate, options: candidate.options.map((o) => o.id === "D" ? replacement : o.id === candidate.correctOptionId ? { ...o, explanation: "Specialized legal support directly addresses the patient’s stated immigration concern; housing and income support alone address different practical barriers.", text: "Acknowledge her concerns and offer confidential specialist legal advice about immigration status and safe access to support." } : o) };
     reviewProvider([candidate], { editorial: { corrections: [correction], advisories: [advisory] }, refined });
     const result = await generateQuestion(input, "test-key");
     expect(generateContent).toHaveBeenCalledTimes(4);
@@ -575,11 +611,11 @@ describe("question generation safeguards", () => {
   it("does not count newly generated teaching as a change to the core question", async () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
-    const refined = { ...candidate, shortExplanation: candidate.shortExplanation + " Prioritize the time-sensitive finding." };
+    const refined = { ...candidate, options: candidate.options.map((option) => option.id === candidate.correctOptionId ? { ...option, explanation: option.explanation + " Prioritize the time-sensitive finding." } : option) };
     reviewProvider([candidate], { refined });
     const events: { data: unknown }[] = [];
     const result = await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
-    expect(result.shortExplanation).toBe(refined.shortExplanation);
+    expect(finalContent(result).correctAnswer.explanation).toBe(finalContent(refined).correctAnswer.explanation);
     expect(events.at(-1)?.data).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
   });
 
@@ -587,14 +623,13 @@ describe("question generation safeguards", () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
     const refined: GeneratedQuestion = { ...candidate, correctOptionId: "B", options: [candidate.options[4],
-      { ...candidate.options[1], text: "Urgent coronary angiography" }, candidate.options[0], candidate.options[3], candidate.options[2]],
-      shortExplanation: "The final case requires urgent coronary angiography based on its time-sensitive findings." };
+      { ...candidate.options[1], text: "Urgent coronary angiography", explanation: "The final case requires urgent coronary angiography based on its time-sensitive findings." }, candidate.options[0], candidate.options[3], candidate.options[2]] };
     reviewProvider([candidate], { refined });
     const events: { data: unknown }[] = [];
     const result = await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
     const answer = result.options.find((option) => option.id === result.correctOptionId)!;
     expect(answer.text).toBe("Urgent coronary angiography");
-    expect(answer.explanation).toBe(refined.shortExplanation);
+    expect(answer.explanation).toBe(finalContent(refined).correctAnswer.explanation);
     expect(answer.hint).toBe("Consider how the case findings support this choice.");
     for (const original of refined.options.filter(({ id }) => id !== refined.correctOptionId)) {
       expect(result.options.find(({ text }) => text === original.text)).toMatchObject({ text: original.text, hint: original.hint, explanation: original.explanation });

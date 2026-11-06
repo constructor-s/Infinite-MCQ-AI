@@ -16,6 +16,15 @@ describe("LocalStudyRepository", () => {
 
   afterEach(async () => database.delete());
 
+  it("loads stored version-two questions containing the legacy duplicate rationale", async () => {
+    const question = makeQuestion();
+    const legacy = { ...question, shortExplanation: question.options[0].explanation };
+    await database.questions.put(legacy);
+    const loaded = await repository.getQuestionById(question.id);
+    expect(loaded?.options).toEqual(question.options);
+    expect(loaded?.schemaVersion).toBe(2);
+  });
+
   it("persists one feedback vote per question, restores it and joins provenance", async () => {
     const question = makeQuestion();
     await repository.enqueue(question);

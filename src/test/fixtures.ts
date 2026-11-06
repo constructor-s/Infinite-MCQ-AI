@@ -21,7 +21,6 @@ export function makeQuestion(overrides: Partial<ClinicalQuestion> = {}): Clinica
       { id: "E", text: "Elective echocardiography", hint: "Ask whether this investigation should precede urgent definitive care.", explanation: "Echocardiography must not delay reperfusion." }
     ],
     correctOptionId: "A",
-    shortExplanation: "The symptoms and inferior ST elevation indicate an acute myocardial infarction requiring an immediate reperfusion pathway.",
     highYieldPearl: "Do not delay reperfusion for nonessential testing in diagnostic STEMI.",
     vignetteSignature: `acs-inferior-${Math.random()}`,
     ...overrides

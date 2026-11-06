@@ -127,7 +127,8 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
             thinkingConfig: { thinkingLevel },
             abortSignal: callSignal,
             httpOptions: { timeout: Math.max(1, GENERATION_DEADLINE_MS - (Date.now() - startedAt)) },
-            ...(stage === "clinical" ? { tools: [{ googleSearch: {} }] } : {})
+            ...(stage === "clinical" ? { tools: [{ googleSearch: {} }, { codeExecution: {} }] }
+              : stage !== "editorial" ? { tools: [{ codeExecution: {} }] } : {})
           }
         }),
         new Promise<never>((_, reject) => {
@@ -175,7 +176,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     };
     // Unknown property names and JSON parser errors can contain model text.
     // Emit only known schema paths and bounded, input-free error descriptions.
-    const fields = new Set(["vignette", "stem", "correctAnswer", "distractors", "options", "text", "hint", "explanation", "shortExplanation", "highYieldPearl", "vignetteSignature", "blueprint"]);
+    const fields = new Set(["vignette", "stem", "correctAnswer", "distractors", "options", "text", "hint", "explanation", "highYieldPearl", "vignetteSignature", "blueprint"]);
     const source = error instanceof z.ZodError ? error.issues : [{ path: [], code,
       message: error instanceof SyntaxError ? "Response is not valid JSON." : qualityMessages[code] ?? "Question failed an application validation check." }];
     const issues = source.slice(0, 10).map((issue) => ({

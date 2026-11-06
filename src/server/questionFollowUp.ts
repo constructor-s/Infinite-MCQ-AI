@@ -28,7 +28,6 @@ function makeContext(question: z.infer<typeof clinicalQuestionSchema>): string {
     stem: question.stem,
     options: question.options.map(({ id, text, explanation }) => ({ id, text, explanation })),
     correctOptionId: question.correctOptionId,
-    rationale: question.shortExplanation,
     pearl: question.highYieldPearl
   });
 }
@@ -51,6 +50,7 @@ export async function answerQuestionFollowUp(rawInput: unknown, apiKey = process
       ],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
+        tools: [{ codeExecution: {} }],
         temperature: 0.3,
         maxOutputTokens: 700
       }

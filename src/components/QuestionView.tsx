@@ -67,7 +67,6 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
         {resolved && (
           <section className="resolution" aria-live="polite">
             <p className="answer-label">Answer: {question.correctOptionId}</p>
-            <p>{question.shortExplanation}</p>
             <p className="pearl"><strong>Clinical pearl:</strong> {question.highYieldPearl}</p>
             <details>
               <summary>Review all answer options</summary>

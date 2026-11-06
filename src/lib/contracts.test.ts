@@ -17,6 +17,13 @@ describe("curriculum and question contracts", () => {
     expect(clinicalQuestionSchema.parse(makeQuestion()).options).toHaveLength(5);
   });
 
+  it("accepts legacy duplicate rationale without including it in the parsed contract", () => {
+    const question = makeQuestion();
+    const parsed = clinicalQuestionSchema.parse({ ...question, shortExplanation: question.options[0].explanation });
+    expect(parsed).toEqual(question);
+    expect(parsed).not.toHaveProperty("shortExplanation");
+  });
+
   it("rejects duplicate option text", () => {
     const question = makeQuestion();
     question.options[4].text = question.options[0].text;

@@ -55,14 +55,14 @@ describe("option length and lean/final schemas", () => {
     for (const count of [3, 5]) expect(questionDraftSchema.safeParse({ ...content, distractors: Array(count).fill("Other answer") }).success).toBe(false);
     expect(questionDraftSchema.safeParse({ ...content, distractors: [content.correctAnswer.toUpperCase() + " ", ...content.distractors.slice(1)] }).success).toBe(false);
     expect(questionDraftSchema.safeParse({ ...content, distractors: ["same", " SAME ", "three", "four"] }).success).toBe(false);
-    expect(questionDraftSchema.safeParse({ ...content, shortExplanation: question.shortExplanation }).success).toBe(false);
+    expect(questionDraftSchema.safeParse({ ...content, shortExplanation: question.options[0].explanation }).success).toBe(false);
     expect(questionDraftSchema.safeParse({ vignette: content.vignette, stem: content.stem, options: question.options.map(({ text }) => text), correctIndex: 0 }).success).toBe(false);
   });
 
   function finalContent(): z.input<typeof refinementSchema> {
     const question = makeQuestion();
     return { vignette: question.vignette, stem: question.stem,
-      correctAnswer: { text: question.options[0].text, explanation: question.shortExplanation },
+      correctAnswer: { text: question.options[0].text, explanation: question.options[0].explanation },
       distractors: question.options.slice(1).map(({ text, hint, explanation }) => ({ text, hint, explanation })),
       highYieldPearl: question.highYieldPearl, vignetteSignature: question.vignetteSignature };
   }
@@ -129,10 +129,10 @@ describe("option length and lean/final schemas", () => {
     expect(generatedQuestionSchema.safeParse(normalized).success).toBe(true);
   });
 
-  it("reuses the correct explanation and returns the unchanged public contract", () => {
+  it("returns option explanations without a duplicate top-level rationale", () => {
     const content = finalContent();
     const question = toGeneratedQuestion(readRefinedQuestion(content), makeQuestion().blueprint, () => 0.999);
-    expect(question.shortExplanation).toBe(content.correctAnswer.explanation);
+    expect(question).not.toHaveProperty("shortExplanation");
     expect(question.options[0].explanation).toBe(content.correctAnswer.explanation);
     expect(question.options[0].hint).toBe("Consider how the case findings support this choice.");
     expect(generatedQuestionSchema.safeParse(question).success).toBe(true);
@@ -150,7 +150,7 @@ describe("option length and lean/final schemas", () => {
     expect(result.options.map(({ id }) => id)).toEqual(["A", "B", "C", "D", "E"]);
     expect(result.options[4]).toMatchObject({ text: content.correctAnswer.text, explanation: content.correctAnswer.explanation });
     for (const choice of content.distractors) expect(result.options.find(({ text }) => text === choice.text)).toMatchObject(choice);
-    expect(result.shortExplanation).toBe(content.correctAnswer.explanation);
+    expect(result).not.toHaveProperty("shortExplanation");
     expect(parsed).toEqual(before);
     const choices = [content.correctAnswer.text, ...content.distractors.map(({ text }) => text)];
     const shuffled = shuffleValues(choices, () => 0);

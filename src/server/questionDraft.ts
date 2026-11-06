@@ -4,7 +4,7 @@ import { shuffleValues } from "../lib/shuffleQuestion.js";
 import type { BlueprintTags } from "../lib/blueprint.js";
 
 const optionIds: OptionId[] = ["A", "B", "C", "D", "E"];
-const { vignette, stem, shortExplanation, highYieldPearl, vignetteSignature } = generatedQuestionSchema.shape;
+const { vignette, stem, highYieldPearl, vignetteSignature } = generatedQuestionSchema.shape;
 const optionText = generatedQuestionSchema.shape.options.element.shape.text;
 const optionHint = generatedQuestionSchema.shape.options.element.shape.hint;
 const optionExplanation = generatedQuestionSchema.shape.options.element.shape.explanation;
@@ -32,7 +32,7 @@ export function questionCoreContent(question: QuestionDraft | RefinedQuestion): 
 // Teaching is required directly by each answer role in the provider schema.
 export const refinementSchema = z.object({
   vignette, stem,
-  correctAnswer: z.object({ text: optionText, explanation: shortExplanation }).strict(),
+  correctAnswer: z.object({ text: optionText, explanation: z.string().min(25) }).strict(),
   distractors: z.array(z.object({ text: optionText, hint: optionHint, explanation: optionExplanation }).strict()).length(4),
   highYieldPearl, vignetteSignature
 }).strict().superRefine((question, ctx) => {
@@ -55,7 +55,6 @@ export function toGeneratedQuestion(final: RefinedQuestion, blueprint: Blueprint
     vignette: final.vignette, stem: final.stem, blueprint,
     options: choices.map((option, index) => ({ ...option, id: optionIds[index] })),
     correctOptionId: optionIds[choices.findIndex(({ text }) => text === final.correctAnswer.text)],
-    shortExplanation: final.correctAnswer.explanation,
     highYieldPearl: final.highYieldPearl, vignetteSignature: final.vignetteSignature
   });
 }
