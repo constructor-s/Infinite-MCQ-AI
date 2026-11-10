@@ -113,23 +113,28 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     const thinkingLevel = GENERATION_THINKING_LEVELS[stage];
     const callNumber = ++calls;
     const callStarted = Date.now();
+    const tools = stage === "clinical" ? [{ googleSearch: {} }, { codeExecution: {} }]
+      : stage !== "editorial" ? [{ codeExecution: {} }] : undefined;
+    const requestPayload = {
+      model: input.model,
+      contents,
+      config: {
+        systemInstruction: instruction,
+        responseMimeType: "application/json",
+        responseJsonSchema: z.toJSONSchema(schema),
+        thinkingConfig: { thinkingLevel },
+        httpOptions: { timeout: Math.max(1, GENERATION_DEADLINE_MS - (Date.now() - startedAt)) },
+        ...(tools ? { tools } : {})
+      }
+    };
     console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} model=${input.model} thinkingLevel=${thinkingLevel} started`);
     // Race the provider so the deadline also holds if a transport ignores cancellation.
     let abortListener: () => void = () => {};
     try {
       const response = await Promise.race([
         ai.models.generateContent({
-          model: input.model, contents,
-          config: {
-            systemInstruction: instruction,
-            responseMimeType: "application/json",
-            responseJsonSchema: z.toJSONSchema(schema),
-            thinkingConfig: { thinkingLevel },
-            abortSignal: callSignal,
-            httpOptions: { timeout: Math.max(1, GENERATION_DEADLINE_MS - (Date.now() - startedAt)) },
-            ...(stage === "clinical" ? { tools: [{ googleSearch: {} }, { codeExecution: {} }] }
-              : stage !== "editorial" ? { tools: [{ codeExecution: {} }] } : {})
-          }
+          ...requestPayload,
+          config: { ...requestPayload.config, abortSignal: callSignal }
         }),
         new Promise<never>((_, reject) => {
           abortListener = () => reject(new GenerationError("GENERATION_TIMEOUT", "Question generation timed out", 504));
@@ -137,7 +142,15 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
           if (callSignal.aborted) abortListener();
         })
       ]);
-      trace("call", round, { stage, call: callNumber, thinkingLevel, status: "success", durationMs: Date.now() - callStarted, usage: response.usageMetadata });
+      const nonTextParts = (response.candidates ?? []).flatMap((candidate, candidateIndex) =>
+        (candidate.content?.parts ?? []).flatMap((part, partIndex) => {
+          const { text: _text, ...partContent } = part;
+          return Object.keys(partContent).length ? [{ candidateIndex, partIndex, part: partContent }] : [];
+        }));
+      trace("call", round, {
+        stage, call: callNumber, thinkingLevel, request: requestPayload, status: "success",
+        durationMs: Date.now() - callStarted, usage: response.usageMetadata, nonTextParts
+      });
       if (verboseLogging) {
         const raw = response.text ?? null;
         let result: unknown = raw;
@@ -148,7 +161,10 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       }
       return response;
     } catch (error) {
-      trace("call", round, { stage, call: callNumber, thinkingLevel, status: "error", durationMs: Date.now() - callStarted, code: failureCode(error) });
+      trace("call", round, {
+        stage, call: callNumber, thinkingLevel, request: requestPayload, status: "error",
+        durationMs: Date.now() - callStarted, code: failureCode(error), nonTextParts: []
+      });
       const status = typeof error === "object" && error !== null ? (error as { status?: unknown }).status : undefined;
       verbose({ stage, round, call: callNumber, thinkingLevel, status: "error", durationMs: Date.now() - callStarted,
         error: { code: failureCode(error), ...(typeof status === "number" ? { httpStatus: status } : {}) } });

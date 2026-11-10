@@ -75,6 +75,32 @@ For draft/review traces without an HTTP server, run:
 node scripts/evaluate-generation.mjs direct /tmp/iworld-generation-evaluation.json
 ```
 
+For one manually assigned question, import the callable debug bench from Node. It writes a timestamped report under `/tmp/iworld-question-debug-bench/`:
+
+```sh
+node --input-type=module <<'NODE'
+import { runQuestionDebugBench } from "./scripts/question-debug-bench.mjs";
+
+const run = await runQuestionDebugBench({
+  topicId: "mcc.78-2",
+  blueprint: {
+    discipline: "phelo",
+    physicianActivity: "assessment_diagnosis",
+    careDimension: "prevention",
+    cognitiveTask: "evidence_statistical_interpretation",
+    mccObjectiveIds: ["78-2"]
+  },
+  enablingObjectiveId: "enabling-7",
+  model: "gemini-3.5-flash-lite",
+  avoidSignatures: []
+});
+
+console.log(run.report.outcome, run.reportPath);
+NODE
+```
+
+Run this from the project root; set `GEMINI_API_KEY` in the shell or `.env.local` first. Each call trace includes its full model request under `data.request` and returned non-text parts under `data.nonTextParts`, including executable code and tool results; credentials, headers and abort signals are excluded. Reports contain complete generation content for local diagnosis and should remain local.
+
 Append a comma-separated list of case IDs to select a subset. Append `--options-only` for an extra wording-clue diagnostic on accepted items. That diagnostic sees the stem and options without the vignette or answer key; its guesses do not change acceptance. Reports include prompt/evaluation versions, actual failed requests, correction requests, delivery outcomes, initial repair/refinement counts and summaries, incomplete-review warnings, advisory counts and descriptive answer-length signals. Successful results are reused only for matching versions and assignments. Actual request failures do not abort the finite case list; missing credentials or quota exhaustion (including reviewer-only quota warnings) stop it to avoid wasted calls.
 
 For a targeted replay of the user-reported wording regression, run:

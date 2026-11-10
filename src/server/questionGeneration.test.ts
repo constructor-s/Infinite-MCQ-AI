@@ -3,7 +3,7 @@ import { clinicalQuestionSchema, generateQuestionRequestSchema, generatedQuestio
 import { PROMPT_VERSION } from "../lib/blueprint";
 import { draftContent, finalContent } from "../test/questionContent";
 import { makeQuestion } from "../test/fixtures";
-import { generateQuestion, GenerationError, makePrompt, validateQuestionQuality as validateRoleQuestionQuality, GENERATION_DEADLINE_MS, REVIEW_DEADLINE_MS } from "./questionGeneration";
+import { generateQuestion, GenerationError, makePrompt, validateQuestionQuality as validateRoleQuestionQuality, GENERATION_DEADLINE_MS, REVIEW_DEADLINE_MS, type GenerationTrace } from "./questionGeneration";
 import { shuffleQuestionOptions } from "../lib/shuffleQuestion";
 import { eligibility } from "../data/curriculum";
 import { sourceObjectivesById } from "./objectives";
@@ -775,7 +775,11 @@ describe("question generation safeguards", () => {
         stage, thinkingLevel: index === 0 ? "MEDIUM" : "LOW", durationMs: expect.any(Number)
       }) }));
     }
-    for (const event of calls) expect(event.data).toHaveProperty("usage");
+    for (const event of calls) {
+      expect(event.data).toHaveProperty("usage");
+      expect(event.data).toHaveProperty("request");
+      expect(event.data).toHaveProperty("nonTextParts", []);
+    }
     expect(allRows.find((row) => row.event === "refinement_result")).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
     expect(rows.map(({ stage, call, round, status }) => ({ stage, call, round, status }))).toEqual([
       { stage: "candidate", call: 1, round: 1, status: "success" },
@@ -787,6 +791,89 @@ describe("question generation safeguards", () => {
     expect(rows[1].grounding.webSearchQueries).toEqual(["reference [REDACTED]"]);
     expect(new Set(rows.map((row) => row.requestId)).size).toBe(1);
     expect(rows.every((row) => row.level === "verbose" && row.event === "call_result" && row.durationMs >= 0)).toBe(true);
+  });
+
+  it("traces complete provider inputs and non-text response parts without credentials", async () => {
+    const input = request();
+    const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
+    reviewProvider([candidate]);
+    const provider = generateContent.getMockImplementation()!;
+    const executableCode = { language: "PYTHON", code: "print(80 / (80 + 45))" };
+    const codeExecutionResult = { outcome: "OUTCOME_OK", output: "0.64" };
+    generateContent.mockImplementation(async (arg) => {
+      const response = await provider(arg);
+      const [first, ...remaining] = response.candidates ?? [];
+      return {
+        ...response,
+        candidates: [{
+          ...first,
+          content: {
+            ...first?.content,
+            parts: [
+              ...(first?.content?.parts ?? []),
+              { executableCode },
+              { codeExecutionResult }
+            ]
+          }
+        }, ...remaining]
+      };
+    });
+
+    const traces: GenerationTrace[] = [];
+    await generateQuestion(input, "private-test-credential", { onTrace: (event) => traces.push(event) });
+    const callTraces = traces.filter((event) => event.stage === "call");
+    expect(callTraces).toHaveLength(4);
+
+    for (const [index, event] of callTraces.entries()) {
+      const data = event.data as {
+        stage: string;
+        call: number;
+        request: { model: string; contents: string; config: Record<string, unknown> };
+        nonTextParts: unknown[];
+      };
+      const [sentRequest] = generateContent.mock.calls[index];
+      const { abortSignal: _abortSignal, ...serializableConfig } = sentRequest.config;
+      expect(data).toMatchObject({ stage: ["candidate", "clinical", "editorial", "refinement"][index], call: index + 1 });
+      expect(data.request).toEqual({ model: sentRequest.model, contents: sentRequest.contents, config: serializableConfig });
+      expect(data.request.config).not.toHaveProperty("abortSignal");
+      expect(data.nonTextParts).toEqual([
+        { candidateIndex: 0, partIndex: 0, part: { executableCode } },
+        { candidateIndex: 0, partIndex: 1, part: { codeExecutionResult } }
+      ]);
+    }
+
+    const editorial = (callTraces[2].data as { request: { config: Record<string, unknown> } }).request;
+    expect(editorial.config).not.toHaveProperty("tools");
+    expect(JSON.stringify(callTraces)).not.toContain("private-test-credential");
+    expect(JSON.stringify(callTraces)).not.toContain("headers");
+  });
+
+  it("keeps the full request on a failed provider call", async () => {
+    const traces: GenerationTrace[] = [];
+    generateContent.mockRejectedValue(Object.assign(new Error("private provider detail"), { status: 503 }));
+
+    await expect(generateQuestion(request(), "private-test-credential", { onTrace: (event) => traces.push(event) }))
+      .rejects.toMatchObject({ code: "GENERATION_FAILED" });
+
+    const call = traces.find((event) => event.stage === "call")!;
+    expect(call.data).toMatchObject({
+      stage: "candidate", call: 1, status: "error",
+      request: {
+        model: "gemini-3.5-flash-lite",
+        contents: expect.any(String),
+        config: {
+          systemInstruction: expect.any(String),
+          responseMimeType: "application/json",
+          responseJsonSchema: expect.any(Object),
+          thinkingConfig: { thinkingLevel: "MEDIUM" },
+          httpOptions: { timeout: expect.any(Number) }
+        }
+      },
+      nonTextParts: []
+    });
+    expect(call.data).toMatchObject({ code: "PROVIDER_UNAVAILABLE" });
+    expect(JSON.stringify(call)).not.toContain("private-test-credential");
+    expect(JSON.stringify(call)).not.toContain("private provider detail");
   });
 
   it("supports debug level and logs malformed JSON and failed reviewers without requiring a reviewer to succeed", async () => {
