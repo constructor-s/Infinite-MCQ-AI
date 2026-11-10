@@ -1,11 +1,14 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RecentQuestionTopic } from "../db/repository";
+import type { LatestGenerationQcReport, RecentQuestionTopic } from "../db/repository";
 import { makeQuestion } from "../test/fixtures";
 import { SettingsDialog } from "./SettingsDialog";
 import { studyRepository, type CorrectRates } from "../db/repository";
+import type { QuestionQualityWarning } from "../lib/contracts";
 
-vi.mock("../db/repository", () => ({ studyRepository: { getCorrectRates: vi.fn(), getRecentQuestionTopics: vi.fn() } }));
+vi.mock("../db/repository", () => ({ studyRepository: {
+  getCorrectRates: vi.fn(), getRecentQuestionTopics: vi.fn(), getLatestSuccessfulGenerationQcReport: vi.fn()
+} }));
 
 const props = {
   open: true,
@@ -32,6 +35,7 @@ describe("SettingsDialog", () => {
 
   beforeEach(() => {
     vi.mocked(studyRepository.getRecentQuestionTopics).mockReset().mockResolvedValue([]);
+    vi.mocked(studyRepository.getLatestSuccessfulGenerationQcReport).mockReset().mockResolvedValue(undefined);
     vi.mocked(studyRepository.getCorrectRates).mockReset().mockResolvedValue({
       lastHour: { correct: 0, total: 0 }, last24Hours: { correct: 0, total: 0 }, recent20: { correct: 0, total: 0 }, recent100: { correct: 0, total: 0 }
     });
@@ -51,6 +55,23 @@ describe("SettingsDialog", () => {
     rerender(<SettingsDialog {...props} lastGenerationError="" />);
     expect(screen.queryByText(/Last generation error:/)).not.toBeInTheDocument();
     await screen.findAllByText("0/0");
+  });
+
+  it("shows successful QC codes and exact issue details, then refreshes to a clean report", async () => {
+    const warning: QuestionQualityWarning = {
+      requestId: "request-id", stage: "refinement", category: "quality", code: "BLUEPRINT_MISMATCH",
+      issues: [{ path: [], code: "BLUEPRINT_MISMATCH", message: "The stem must directly test risk_stratification." }],
+      issueCount: 1, truncated: false
+    };
+    const withWarning: LatestGenerationQcReport = { timestamp: "2026-11-10T16:00:00.000Z", topicId: "mcc.14", qualityWarnings: [warning] };
+    const clean: LatestGenerationQcReport = { timestamp: "2026-11-10T16:01:00.000Z", topicId: "mcc.21-1", qualityWarnings: [] };
+    vi.mocked(studyRepository.getLatestSuccessfulGenerationQcReport).mockResolvedValueOnce(withWarning).mockResolvedValueOnce(clean);
+    const { rerender } = render(<SettingsDialog {...props} qcRefreshVersion={0} />);
+    expect(await screen.findByText("BLUEPRINT_MISMATCH", { selector: "strong code" })).toBeInTheDocument();
+    expect(screen.getByText("BLUEPRINT_MISMATCH", { selector: "span code" })).toBeInTheDocument();
+    expect(screen.getByText("The stem must directly test risk_stratification.")).toBeInTheDocument();
+    rerender(<SettingsDialog {...props} qcRefreshVersion={1} />);
+    expect(await screen.findByText("No QC warnings on the latest generated question.")).toBeInTheDocument();
   });
 
   it("shows completed question titles and readable dimensions", async () => {

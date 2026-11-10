@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { ClinicalQuestion, Encounter } from "../lib/contracts";
+import type { ClinicalQuestion, Encounter, QuestionQualityWarning } from "../lib/contracts";
 import type { BlueprintTags } from "../lib/blueprint";
 import type { FocusedStudy } from "../lib/studyFocus";
 
@@ -27,6 +27,7 @@ export type GenerationEvent = {
   model: string;
   outcome: "success" | "error";
   code?: string;
+  qualityWarnings?: QuestionQualityWarning[];
   blueprint?: BlueprintTags;
   blueprintVersion?: string;
   curriculumVersion?: string;

@@ -19,6 +19,7 @@ export default function App() {
   const [progress, setProgress] = useState(DEFAULT_PROGRESS);
   const [generationError, setGenerationError] = useState("");
   const [lastGenerationError, setLastGenerationError] = useState("");
+  const [qcRefreshVersion, setQcRefreshVersion] = useState(0);
   const [busyEncounterId, setBusyEncounterId] = useState<string>();
   const busy = Boolean(encounter && busyEncounterId === encounter.id);
   const [initialized, setInitialized] = useState(false);
@@ -55,7 +56,10 @@ export default function App() {
     void questionQueue.fill((nextProgress) => {
       if (!mountedRef.current || !sameStudyFocus(nextProgress.focus, focusRef.current)) return;
       setProgress(nextProgress);
-      if (nextProgress.generationSucceeded) setLastGenerationError("");
+      if (nextProgress.generationSucceeded) {
+        setLastGenerationError("");
+        setQcRefreshVersion((version) => version + 1);
+      }
       if (nextProgress.ready > 0) resumeWhenReady();
     }).then(() => {
       if (!mountedRef.current || request !== fillRequestRef.current || !sameStudyFocus(requestedFocus, focusRef.current)) return;
@@ -296,6 +300,7 @@ export default function App() {
         reviewMode={mode === "review"}
         generationError={generationError}
         lastGenerationError={lastGenerationError}
+        qcRefreshVersion={qcRefreshVersion}
         open={settingsOpen}
         selectedModel={selectedModel}
         theme={theme}

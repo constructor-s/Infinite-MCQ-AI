@@ -84,6 +84,7 @@ export const generateQuestionRequestSchema = z.object({
 export type GenerateQuestionRequest = z.infer<typeof generateQuestionRequestSchema>;
 
 export type QuestionGenerationDiagnostic = {
+  requestId?: string;
   stage: "candidate" | "refinement";
   category: "schema" | "json" | "quality";
   code: string;
@@ -91,6 +92,21 @@ export type QuestionGenerationDiagnostic = {
   issueCount: number;
   truncated: boolean;
 };
+
+export const questionQualityWarningSchema = z.object({
+  requestId: z.string().optional(),
+  stage: z.enum(["candidate", "refinement"]),
+  category: z.literal("quality"),
+  code: z.string().min(1),
+  issues: z.array(z.object({
+    path: z.array(z.union([z.string(), z.number()])),
+    code: z.string().min(1),
+    message: z.string()
+  }).strict()),
+  issueCount: z.number().int().nonnegative(),
+  truncated: z.boolean()
+}).strict();
+export type QuestionQualityWarning = z.infer<typeof questionQualityWarningSchema>;
 
 export type EncounterMode = "fresh" | "review";
 export type FollowUpMessage = { role: "user" | "assistant"; text: string };

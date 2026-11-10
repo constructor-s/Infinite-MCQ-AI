@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ModelOption, Theme } from "../lib/contracts";
 import { fetchModels } from "../services/questionQueue";
-import { studyRepository, type CorrectRates, type RecentQuestionTopic } from "../db/repository";
+import { studyRepository, type CorrectRates, type LatestGenerationQcReport, type RecentQuestionTopic } from "../db/repository";
 import { questionUrl } from "../lib/questionNavigation";
 import { StudyFocusSettings } from "./StudyFocusSettings";
 import type { StudyFocus } from "../lib/studyFocus";
@@ -15,6 +15,7 @@ type Props = {
   reviewMode: boolean;
   generationError?: string;
   lastGenerationError?: string;
+  qcRefreshVersion?: number;
   selectedModel: string;
   theme: Theme;
   studyFocus: StudyFocus;
@@ -41,13 +42,16 @@ function dimensionLabel(value: string): string {
   return dimensionLabels[value] ?? value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApplyFocus, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError, lastGenerationError }: Props) {
+export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApplyFocus, onClose, onOpenQuestion, onSelectModel, onSelectTheme, ready, target, generating, offline, reviewMode, generationError, lastGenerationError, qcRefreshVersion = 0 }: Props) {
   const [recentQuestions, setRecentQuestions] = useState<RecentQuestionTopic[] | null>(null);
   const [historyError, setHistoryError] = useState("");
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
   const [error, setError] = useState("");
   const [correctRates, setCorrectRates] = useState<CorrectRates | null>(null);
   const [ratesError, setRatesError] = useState("");
+  const [qcReport, setQcReport] = useState<LatestGenerationQcReport | null>(null);
+  const [qcLoading, setQcLoading] = useState(false);
+  const [qcError, setQcError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -59,6 +63,19 @@ export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApply
       .catch(() => { if (active) setHistoryError("Could not load recent question topics."); });
     return () => { active = false; };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setQcReport(null);
+    setQcLoading(true);
+    setQcError("");
+    void studyRepository.getLatestSuccessfulGenerationQcReport()
+      .then((report) => { if (active) setQcReport(report ?? null); })
+      .catch(() => { if (active) setQcError("Could not load the latest question QC report."); })
+      .finally(() => { if (active) setQcLoading(false); });
+    return () => { active = false; };
+  }, [open, qcRefreshVersion]);
 
   useEffect(() => {
     if (!open) return;
@@ -154,6 +171,27 @@ export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApply
         {lastGenerationError && (
           <p className="settings-generation-error" aria-live="polite">Last generation error: {lastGenerationError}</p>
         )}
+        <section className="quality-warning-settings" aria-labelledby="quality-warning-title">
+          <h3 id="quality-warning-title">Latest generated question QC</h3>
+          <div aria-live="polite">
+            {qcError ? <p className="inline-error">{qcError}</p> : qcLoading ? <p className="settings-note">Loading QC findings…</p> : !qcReport ? (
+              <p className="settings-note">No successful generation recorded yet.</p>
+            ) : qcReport.qualityWarnings.length === 0 ? (
+              <p className="settings-note">No QC warnings on the latest generated question.</p>
+            ) : (
+              <ul className="quality-warning-list">
+                {qcReport.qualityWarnings.flatMap((warning, warningIndex) => warning.issues.map((issue, issueIndex) => (
+                  <li key={`${warningIndex}-${issueIndex}`}>
+                    <strong><code>{warning.code}</code></strong>
+                    <span> · issue <code>{issue.code}</code></span>
+                    {issue.path.length > 0 && <span> · {issue.path.join(".")}</span>}
+                    <p>{issue.message}</p>
+                  </li>
+                )))}
+              </ul>
+            )}
+          </div>
+        </section>
         <section className="recent-question-settings" aria-labelledby="recent-question-title">
           <h3 id="recent-question-title">Recent question topics</h3>
           <p className="settings-note">Last 20 completed questions, newest first. Reviews appear once, using the latest completion. Results reflect the first try; reveals count as incorrect.</p>

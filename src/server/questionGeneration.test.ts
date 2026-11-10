@@ -422,10 +422,18 @@ describe("question generation safeguards", () => {
     const input = request();
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which diagnosis is most likely?" };
     const events: { stage: string; data: unknown }[] = [];
+    const warnings: unknown[] = [];
     reviewProvider([candidate]);
-    await generateQuestion(input, "test-key", { onTrace: (event) => events.push(event) });
+    await generateQuestion(input, "test-key", {
+      onTrace: (event) => events.push(event),
+      onQualityWarning: (warning) => warnings.push(warning)
+    });
     expect(generateContent).toHaveBeenCalledTimes(3);
     expect(events).toContainEqual(expect.objectContaining({ stage: "validation", data: expect.objectContaining({ code: "BLUEPRINT_MISMATCH" }) }));
+    expect(warnings).toContainEqual(expect.objectContaining({
+      category: "quality", code: "BLUEPRINT_MISMATCH",
+      issues: [expect.objectContaining({ code: "BLUEPRINT_MISMATCH", message: expect.stringContaining("initial_stabilization") })]
+    }));
   });
 
   it.each(["malformed", "unavailable"] as const)("delivers a valid draft when a reviewer is %s", async (failure) => {

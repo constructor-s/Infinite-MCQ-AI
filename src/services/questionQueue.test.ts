@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ClinicalQuestion, QuestionGenerationDiagnostic } from "../lib/contracts";
+import type { ClinicalQuestion, QuestionGenerationDiagnostic, QuestionQualityWarning } from "../lib/contracts";
 import type { LocalStudyRepository } from "../db/repository";
 import { makeQuestion } from "../test/fixtures";
 import { ApiError, formatApiError, QUEUE_TARGET, QuestionQueueService } from "./questionQueue";
@@ -138,7 +138,7 @@ describe("QuestionQueueService", () => {
       return new Response(JSON.stringify(makeQuestion({ topicId: input.topicId, blueprint: input.blueprint })));
     }));
     await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill(progress)).rejects.toMatchObject({ code: "NETWORK_ERROR" });
-    expect(progress).toHaveBeenCalledWith({ ready: 1, target: QUEUE_TARGET, generating: true, focus: null, generationSucceeded: true });
+    expect(progress).toHaveBeenCalledWith({ ready: 1, target: QUEUE_TARGET, generating: true, focus: null, generationSucceeded: true, qualityWarnings: [] });
     expect(repository.questions).toHaveLength(1);
   });
 
@@ -173,6 +173,24 @@ describe("QuestionQueueService", () => {
     const error = new ApiError("INVALID_REFINEMENT", "INVALID_REFINEMENT", 502, diagnostic);
     expect(formatApiError(error)).toBe("INVALID_REFINEMENT (refinement/schema): distractors.0.hint: too_small: Too small: expected string to have >=15 characters");
     expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error", code: "INVALID_REFINEMENT" }));
+  });
+
+  it("persists successful QC warnings without adding them to the stored question", async () => {
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()));
+    const warning: QuestionQualityWarning = {
+      requestId: "request-id", stage: "refinement", category: "quality", code: "BLUEPRINT_MISMATCH",
+      issues: [{ path: [], code: "BLUEPRINT_MISMATCH", message: "The stem must directly test risk_stratification." }],
+      issueCount: 1, truncated: false
+    };
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const input = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ ...makeQuestion({ topicId: input.topicId, blueprint: input.blueprint }), qualityWarnings: [warning] }));
+    }));
+    const progress = vi.fn();
+    await new QuestionQueueService(repository as unknown as LocalStudyRepository).fill(progress);
+    expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "success", qualityWarnings: [warning] }));
+    expect(repository.questions.at(-1)).not.toHaveProperty("qualityWarnings");
+    expect(progress).toHaveBeenCalledWith(expect.objectContaining({ generationSucceeded: true, qualityWarnings: [warning] }));
   });
 
   it("lets an existing larger queue drain without deleting questions or generating more", async () => {

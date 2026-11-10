@@ -3,7 +3,7 @@ import Dexie from "dexie";
 import { IWorldDatabase } from "./database";
 import { LocalStudyRepository } from "./repository";
 import { makeQuestion } from "../test/fixtures";
-import type { Encounter } from "../lib/contracts";
+import type { Encounter, QuestionQualityWarning } from "../lib/contracts";
 
 describe("LocalStudyRepository", () => {
   let database: IWorldDatabase;
@@ -356,6 +356,22 @@ describe("LocalStudyRepository", () => {
     expect(await reloaded.getFreshCount()).toBe(1);
     expect((await database.encounters.get(encounter.id))?.blueprint).toEqual(first.blueprint);
     expect((await reloaded.getRecentGeneratedQuestions()).map((q) => q.id)).toEqual([second.id, first.id]);
+  });
+
+  it("loads the newest successful generation QC report and ignores later failures", async () => {
+    const warning: QuestionQualityWarning = {
+      requestId: "request-id", stage: "refinement", category: "quality", code: "BLUEPRINT_MISMATCH",
+      issues: [{ path: [], code: "BLUEPRINT_MISMATCH", message: "The stem must directly test risk_stratification." }],
+      issueCount: 1, truncated: false
+    };
+    await database.generationEvents.bulkPut([
+      { id: "success-with-warning", timestamp: "2026-11-10T16:00:00.000Z", topicId: "mcc.14", model: "gemini-3.5-flash-lite", outcome: "success", qualityWarnings: [warning] },
+      { id: "newer-success-clean", timestamp: "2026-11-10T16:01:00.000Z", topicId: "mcc.21-1", model: "gemini-3.5-flash-lite", outcome: "success", qualityWarnings: [] },
+      { id: "latest-failure", timestamp: "2026-11-10T16:02:00.000Z", topicId: "mcc.22-1", model: "gemini-3.5-flash-lite", outcome: "error", code: "TIMEOUT" }
+    ]);
+    expect(await new LocalStudyRepository(database).getLatestSuccessfulGenerationQcReport()).toEqual({
+      timestamp: "2026-11-10T16:01:00.000Z", topicId: "mcc.21-1", qualityWarnings: []
+    });
   });
 
   it("retains only the last 200 generated questions for coverage", async () => {

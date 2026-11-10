@@ -1,5 +1,5 @@
 import { db, type GenerationEvent, type IWorldDatabase, type QuestionFeedback } from "./database";
-import { clinicalQuestionSchema, type ClinicalQuestion, type Encounter, type EncounterMode, type FollowUpMessage, type OptionId } from "../lib/contracts";
+import { clinicalQuestionSchema, questionQualityWarningSchema, type ClinicalQuestion, type Encounter, type EncounterMode, type FollowUpMessage, type OptionId, type QuestionQualityWarning } from "../lib/contracts";
 import { createLocalId } from "../lib/createLocalId";
 import { blueprint, blueprintTagsSchema } from "../lib/blueprint";
 import type { SamplingContext, CoverageRecord, ObjectiveStats } from "../lib/blueprintSampler";
@@ -9,6 +9,7 @@ export type RecentQuestionTopic = ClinicalQuestion & { encounterId: string; outc
 
 export type CorrectRate = { correct: number; total: number };
 export type CorrectRates = { recent20: CorrectRate; recent100: CorrectRate; lastHour: CorrectRate; last24Hours: CorrectRate };
+export type LatestGenerationQcReport = { timestamp: string; topicId: string; qualityWarnings: QuestionQualityWarning[] };
 
 export class LocalStudyRepository {
   constructor(private database: IWorldDatabase = db) {}
@@ -184,6 +185,18 @@ export class LocalStudyRepository {
     // Include unseen queued scenarios so a refill also avoids its own new items.
     return this.database.questions.orderBy("generatedAt").reverse()
       .filter((question) => question.schemaVersion === 2).limit(limit).toArray();
+  }
+
+  async getLatestSuccessfulGenerationQcReport(): Promise<LatestGenerationQcReport | undefined> {
+    const event = await this.database.generationEvents.orderBy("timestamp").reverse()
+      .filter((candidate) => candidate.outcome === "success").first();
+    if (!event) return undefined;
+    const parsedWarnings = questionQualityWarningSchema.array().safeParse(event.qualityWarnings ?? []);
+    return {
+      timestamp: event.timestamp,
+      topicId: event.topicId,
+      qualityWarnings: parsedWarnings.success ? parsedWarnings.data : []
+    };
   }
 
   async beginEncounter(question: ClinicalQuestion, mode: EncounterMode): Promise<Encounter> {

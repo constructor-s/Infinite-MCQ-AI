@@ -223,6 +223,11 @@ legend { margin-bottom: 9px; font-weight: 700; }
 
 .recent-question-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--soft-border); }
 .recent-question-settings h3 { margin: 0 0 9px; font-size: 16px; }
+.quality-warning-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--soft-border); }
+.quality-warning-settings h3 { margin: 0 0 9px; font-size: 16px; }
+.quality-warning-list { margin: 12px 0 0; padding-left: 24px; }
+.quality-warning-list li { padding: 8px 0; overflow-wrap: anywhere; }
+.quality-warning-list p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .recent-question-list { margin: 16px 0 0; padding-left: 24px; }
 .recent-question-list li { padding: 12px 0; border-bottom: 1px solid var(--soft-border); overflow-wrap: anywhere; }
 .recent-question-list li:last-child { border-bottom: 0; }

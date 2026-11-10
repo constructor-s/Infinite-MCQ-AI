@@ -1,4 +1,4 @@
-import { clinicalQuestionSchema, type ClinicalQuestion, type ModelOption, type QuestionGenerationDiagnostic } from "../lib/contracts";
+import { clinicalQuestionSchema, questionQualityWarningSchema, type ClinicalQuestion, type ModelOption, type QuestionGenerationDiagnostic, type QuestionQualityWarning } from "../lib/contracts";
 import { selectBlueprint } from "../lib/blueprintSampler";
 import { blueprint, PROMPT_VERSION, sameBlueprint } from "../lib/blueprint";
 import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
@@ -7,7 +7,7 @@ import { focusCombinations, sameStudyFocus, type StudyFocus } from "../lib/study
 
 export const QUEUE_TARGET = 3;
 
-export type QueueProgress = { ready: number; target: number; generating: boolean; focus?: StudyFocus; generationSucceeded?: boolean };
+export type QueueProgress = { ready: number; target: number; generating: boolean; focus?: StudyFocus; generationSucceeded?: boolean; qualityWarnings?: QuestionQualityWarning[] };
 
 type ModelsResponse = { models: ModelOption[]; availabilityUnverified?: boolean };
 
@@ -77,12 +77,15 @@ export class QuestionQueueService {
 
   private async fillUnlocked(onProgress?: (progress: QueueProgress) => void): Promise<void> {
     let generatedForFocus: StudyFocus | undefined;
+    let generatedQualityWarnings: QuestionQualityWarning[] | undefined;
     while (true) {
       const focus = await this.repository.getStudyFocus();
       const ready = await this.repository.getFreshCount(focus);
       onProgress?.({ ready, target: QUEUE_TARGET, generating: ready < QUEUE_TARGET, focus,
-        ...(generatedForFocus !== undefined && sameStudyFocus(generatedForFocus, focus) ? { generationSucceeded: true } : {}) });
+        ...(generatedForFocus !== undefined && sameStudyFocus(generatedForFocus, focus)
+          ? { generationSucceeded: true, qualityWarnings: generatedQualityWarnings ?? [] } : {}) });
       generatedForFocus = undefined;
+      generatedQualityWarnings = undefined;
       if (ready >= QUEUE_TARGET) {
         if (sameStudyFocus(focus, await this.repository.getStudyFocus())) return;
         continue;
@@ -107,15 +110,19 @@ export class QuestionQueueService {
         });
         const body = await response.json();
         if (!response.ok) throw new ApiError(body.error?.code ?? "GENERATION_FAILED", body.error?.message ?? "Generation failed", response.status, body.error?.diagnostic);
-        const question: ClinicalQuestion = clinicalQuestionSchema.parse({ ...body, generationFocus: focus ?? undefined });
+        const warningsResult = questionQualityWarningSchema.array().safeParse(body.qualityWarnings ?? []);
+        const qualityWarnings: QuestionQualityWarning[] = warningsResult.success ? warningsResult.data : [];
+        const { qualityWarnings: _qualityWarnings, ...questionResponse } = body;
+        const question: ClinicalQuestion = clinicalQuestionSchema.parse({ ...questionResponse, generationFocus: focus ?? undefined });
         if (question.topicId !== selection.topicId || !sameBlueprint(question.blueprint, selection.blueprint)) {
           throw new ApiError("BLUEPRINT_MISMATCH", "Generated question does not match its selected blueprint", 502);
         }
         await this.repository.enqueue(question);
-        await this.repository.logGeneration({ topicId: selection.topicId, model, outcome: "success", ...metadata });
+        await this.repository.logGeneration({ topicId: selection.topicId, model, outcome: "success", qualityWarnings, ...metadata });
         // The next existing progress update reports this success before another
         // request begins, without changing queue reads or refill behavior.
         generatedForFocus = focus;
+        generatedQualityWarnings = qualityWarnings;
       } catch (error) {
         const code = error instanceof ApiError ? error.code : error instanceof DOMException && error.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR";
         try {

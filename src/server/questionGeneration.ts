@@ -9,7 +9,8 @@ import {
   type ClinicalQuestion,
   type GenerateQuestionRequest,
   type ModelOption,
-  type QuestionGenerationDiagnostic
+  type QuestionGenerationDiagnostic,
+  type QuestionQualityWarning
 } from "../lib/contracts.js";
 import { shuffleValues } from "../lib/shuffleQuestion.js";
 import { clinicalReviewSchema, readClinicalReview, CLINICAL_REVIEW_INSTRUCTION, reviewContext, reviewFindings, refinementSchema, readRefinedQuestion, changedQuestionFields, refinementPrompt, REFINEMENT_INSTRUCTION, type ClinicalReview } from "./questionReview.js";
@@ -78,6 +79,8 @@ export type GenerationTrace = {
 export type GenerationOptions = {
   /** Local evaluation only; never included in HTTP responses or routine logs. */
   onTrace?: (trace: GenerationTrace) => void;
+  /** Sanitized, non-blocking QC findings for successful generated questions. */
+  onQualityWarning?: (warning: QuestionQualityWarning) => void;
   signal?: AbortSignal;
 };
 
@@ -215,7 +218,8 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   };
   const reportQualityIssues = (stage: "candidate" | "refinement", round: number, issues: QuestionQualityIssue[]) => {
     for (const issue of issues) {
-      const diagnostic: QuestionGenerationDiagnostic = {
+      const diagnostic: QuestionQualityWarning = {
+        requestId,
         stage, category: "quality", code: issue.code,
         issues: [{ path: [], code: issue.code, message: issue.message.replaceAll(apiKey, "[REDACTED]").replace(/[\r\n\t]/g, " ").slice(0, 240) }],
         issueCount: 1, truncated: false
@@ -223,6 +227,8 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       const line = JSON.stringify({ requestId, ...diagnostic });
       console.warn(`[question-generation:validation] ${line}`);
       trace("validation", round, { requestId, ...diagnostic });
+      try { options.onQualityWarning?.(diagnostic); }
+      catch { console.warn(`[question-generation] requestId=${requestId} quality warning callback failed`); }
     }
   };
   let candidateCalls = 0;

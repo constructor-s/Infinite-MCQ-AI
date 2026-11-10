@@ -1,9 +1,14 @@
 import { ZodError } from "zod";
 import { generateQuestion, GenerationError } from "../../src/server/questionGeneration.js";
+import type { ClinicalQuestion, QuestionQualityWarning } from "../../src/lib/contracts.js";
 
 export function generationErrorResponse(error: GenerationError): Response {
   return Response.json({ error: { code: error.code, message: error.message,
     ...(error.diagnostic ? { diagnostic: error.diagnostic } : {}) } }, { status: error.status });
+}
+
+export function generationSuccessResponse(question: ClinicalQuestion, qualityWarnings: QuestionQualityWarning[] = []): Response {
+  return Response.json({ ...question, qualityWarnings }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function fetch(request: Request): Promise<Response> {
@@ -15,9 +20,13 @@ export async function fetch(request: Request): Promise<Response> {
   }
   try {
     const body = await request.json();
-    const question = await generateQuestion(body, undefined, { signal: request.signal });
+    const qualityWarnings: QuestionQualityWarning[] = [];
+    const question = await generateQuestion(body, undefined, {
+      signal: request.signal,
+      onQualityWarning: (warning) => qualityWarnings.push(warning)
+    });
     console.info(`[question-generation] request completed status=200 durationMs=${Date.now() - startedAt}`);
-    return Response.json(question, { headers: { "Cache-Control": "no-store" } });
+    return generationSuccessResponse(question, qualityWarnings);
   } catch (error) {
     if (error instanceof ZodError) {
       console.warn(`[question-generation] request failed code=INVALID_REQUEST durationMs=${Date.now() - startedAt}`);
