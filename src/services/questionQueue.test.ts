@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ClinicalQuestion } from "../lib/contracts";
+import type { ClinicalQuestion, QuestionGenerationDiagnostic } from "../lib/contracts";
 import type { LocalStudyRepository } from "../db/repository";
 import { makeQuestion } from "../test/fixtures";
-import { QUEUE_TARGET, QuestionQueueService } from "./questionQueue";
+import { ApiError, formatApiError, QUEUE_TARGET, QuestionQueueService } from "./questionQueue";
 import { sameStudyFocus, type StudyFocus } from "../lib/studyFocus";
 
 function makeRepository(initial: ClinicalQuestion[] = []) {
@@ -137,7 +137,7 @@ describe("QuestionQueueService", () => {
       const input = JSON.parse(String(init.body));
       return new Response(JSON.stringify(makeQuestion({ topicId: input.topicId, blueprint: input.blueprint })));
     }));
-    await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill(progress)).rejects.toThrow("Later request failed");
+    await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill(progress)).rejects.toMatchObject({ code: "NETWORK_ERROR" });
     expect(progress).toHaveBeenCalledWith({ ready: 1, target: QUEUE_TARGET, generating: true, focus: null, generationSucceeded: true });
     expect(repository.questions).toHaveLength(1);
   });
@@ -155,6 +155,24 @@ describe("QuestionQueueService", () => {
     }));
     await service.fill();
     expect(repository.questions).toHaveLength(QUEUE_TARGET);
+  });
+
+  it("preserves logged validation codes and issue messages for status display", async () => {
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()));
+    const diagnostic: QuestionGenerationDiagnostic = {
+      stage: "refinement", category: "schema", code: "INVALID_REFINEMENT",
+      issues: [{ path: ["distractors", 0, "hint"], code: "too_small", message: "Too small: expected string to have >=15 characters" }],
+      issueCount: 1, truncated: false
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: {
+      code: "INVALID_REFINEMENT", message: "INVALID_REFINEMENT", diagnostic
+    } }), { status: 502 })));
+    await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill()).rejects.toMatchObject({
+      code: "INVALID_REFINEMENT", diagnostic
+    });
+    const error = new ApiError("INVALID_REFINEMENT", "INVALID_REFINEMENT", 502, diagnostic);
+    expect(formatApiError(error)).toBe("INVALID_REFINEMENT (refinement/schema): distractors.0.hint: too_small: Too small: expected string to have >=15 characters");
+    expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error", code: "INVALID_REFINEMENT" }));
   });
 
   it("lets an existing larger queue drain without deleting questions or generating more", async () => {

@@ -1,4 +1,4 @@
-import { clinicalQuestionSchema, type ClinicalQuestion, type ModelOption } from "../lib/contracts";
+import { clinicalQuestionSchema, type ClinicalQuestion, type ModelOption, type QuestionGenerationDiagnostic } from "../lib/contracts";
 import { selectBlueprint } from "../lib/blueprintSampler";
 import { blueprint, PROMPT_VERSION, sameBlueprint } from "../lib/blueprint";
 import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
@@ -12,9 +12,19 @@ export type QueueProgress = { ready: number; target: number; generating: boolean
 type ModelsResponse = { models: ModelOption[]; availabilityUnverified?: boolean };
 
 export class ApiError extends Error {
-  constructor(public code: string, message: string, public status: number) {
+  constructor(public code: string, message: string, public status: number, public diagnostic?: QuestionGenerationDiagnostic) {
     super(message);
   }
+}
+
+export function formatApiError(error: ApiError): string {
+  const diagnostic = error.diagnostic;
+  if (!diagnostic?.issues.length) return error.code;
+  const issues = diagnostic.issues.map((issue) => {
+    const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
+    return `${path}${issue.code}: ${issue.message}`;
+  }).join("; ");
+  return `${error.code} (${diagnostic.stage}/${diagnostic.category}): ${issues}`;
 }
 
 // Allow for background generation, two reviews and bounded revisions.
@@ -96,7 +106,7 @@ export class QuestionQueueService {
           })
         });
         const body = await response.json();
-        if (!response.ok) throw new ApiError(body.error?.code ?? "GENERATION_FAILED", body.error?.message ?? "Generation failed", response.status);
+        if (!response.ok) throw new ApiError(body.error?.code ?? "GENERATION_FAILED", body.error?.message ?? "Generation failed", response.status, body.error?.diagnostic);
         const question: ClinicalQuestion = clinicalQuestionSchema.parse({ ...body, generationFocus: focus ?? undefined });
         if (question.topicId !== selection.topicId || !sameBlueprint(question.blueprint, selection.blueprint)) {
           throw new ApiError("BLUEPRINT_MISMATCH", "Generated question does not match its selected blueprint", 502);
@@ -114,7 +124,10 @@ export class QuestionQueueService {
           // Preserve the generation error if diagnostic persistence is unavailable.
         }
         // A failure in an old scope must not pause the newly selected focus.
-        if (sameStudyFocus(focus, await this.repository.getStudyFocus())) throw error;
+        if (sameStudyFocus(focus, await this.repository.getStudyFocus())) {
+          if (error instanceof ApiError) throw error;
+          throw new ApiError(code, code, error instanceof DOMException && error.name === "AbortError" ? 408 : 0);
+        }
       }
     }
   }

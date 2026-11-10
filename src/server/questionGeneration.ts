@@ -8,17 +8,17 @@ import {
   generateQuestionRequestSchema,
   type ClinicalQuestion,
   type GenerateQuestionRequest,
-  type ModelOption
+  type ModelOption,
+  type QuestionGenerationDiagnostic
 } from "../lib/contracts.js";
 import { shuffleValues } from "../lib/shuffleQuestion.js";
-import { clinicalReviewSchema, readClinicalReview, editorialReviewSchema, CLINICAL_REVIEW_INSTRUCTION, EDITORIAL_REVIEW_INSTRUCTION, EDITORIAL_EXAMPLES, reviewContext, reviewFindings, refinementSchema, readRefinedQuestion, changedQuestionFields, refinementPrompt, REFINEMENT_INSTRUCTION, type ClinicalReview, type EditorialReview } from "./questionReview.js";
+import { clinicalReviewSchema, readClinicalReview, CLINICAL_REVIEW_INSTRUCTION, reviewContext, reviewFindings, refinementSchema, readRefinedQuestion, changedQuestionFields, refinementPrompt, REFINEMENT_INSTRUCTION, type ClinicalReview } from "./questionReview.js";
 import { questionDraftSchema, readQuestionDraft, questionCoreContent, toGeneratedQuestion, type QuestionDraft, type RefinedQuestion } from "./questionDraft.js";
 import { optionLengthIssue } from "./questionOptions.js";
 
 export const GENERATION_THINKING_LEVELS = Object.freeze({
   candidate: ThinkingLevel.MEDIUM,
   clinical: ThinkingLevel.LOW,
-  editorial: ThinkingLevel.LOW,
   refinement: ThinkingLevel.LOW
 });
 
@@ -41,32 +41,37 @@ export function makePrompt(input: GenerateQuestionRequest, feedback?: unknown, p
 }
 
 export class GenerationError extends Error {
-  constructor(public code: string, message: string, public status = 500) {
+  constructor(public code: string, message: string, public status = 500, public diagnostic?: QuestionGenerationDiagnostic) {
     super(message);
   }
 }
 
-export function validateQuestionQuality(question: RefinedQuestion, avoidSignatures: string[], assignment: BlueprintTags): void {
+export type QuestionQualityIssue = { code: string; message: string };
+
+export function validateQuestionQuality(question: RefinedQuestion, avoidSignatures: string[], assignment: BlueprintTags): QuestionQualityIssue[] {
+  const issues: QuestionQualityIssue[] = [];
   const issue = alignmentIssue(question, assignment);
-  if (issue) throw new GenerationError("BLUEPRINT_MISMATCH", issue, 502);
+  if (issue) issues.push({ code: "BLUEPRINT_MISMATCH", message: issue });
   if (avoidSignatures.some((signature) => signature.toLowerCase() === question.vignetteSignature.toLowerCase())) {
-    throw new GenerationError("DUPLICATE_SCENARIO", "Generated scenario duplicates a recent question", 502);
+    issues.push({ code: "DUPLICATE_SCENARIO", message: "Generated scenario duplicates a recent question" });
   }
   const lengthIssue = optionLengthIssue(questionCoreContent(question));
-  if (lengthIssue) throw new GenerationError("ANSWER_LENGTH_GIVEAWAY", lengthIssue, 502);
+  if (lengthIssue) issues.push({ code: "ANSWER_LENGTH_GIVEAWAY", message: lengthIssue });
   const correctText = question.correctAnswer.text.toLowerCase();
   for (const option of question.distractors) {
     if (correctText.length > 5 && option.hint.toLowerCase().includes(correctText)) {
-      throw new GenerationError("ANSWER_LEAK", "A hint reveals the correct answer", 502);
+      issues.push({ code: "ANSWER_LEAK", message: "A hint reveals the correct answer" });
+      break;
     }
   }
+  return issues;
 }
 
 export const GENERATION_DEADLINE_MS = 285_000;
 export const REVIEW_DEADLINE_MS = 90_000;
 export type GenerationTrace = {
   requestId: string;
-  stage: "candidate" | "clinical" | "editorial" | "refinement" | "validation" | "decision" | "call";
+  stage: "candidate" | "clinical" | "refinement" | "validation" | "decision" | "call";
   round: number;
   data: unknown;
 };
@@ -108,13 +113,12 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       console.warn(`[question-generation] requestId=${requestId} verbose logging failed`);
     }
   };
-  async function call(stage: "candidate" | "clinical" | "editorial" | "refinement", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
+  async function call(stage: "candidate" | "clinical" | "refinement", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
     callSignal.throwIfAborted();
     const thinkingLevel = GENERATION_THINKING_LEVELS[stage];
     const callNumber = ++calls;
     const callStarted = Date.now();
-    const tools = stage === "clinical" ? [{ googleSearch: {} }, { codeExecution: {} }]
-      : stage !== "editorial" ? [{ codeExecution: {} }] : undefined;
+    const tools = stage === "clinical" ? [{ googleSearch: {} }, { codeExecution: {} }] : undefined;
     const requestPayload = {
       model: input.model,
       contents,
@@ -180,7 +184,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     if (/429|resource_exhausted|quota/i.test(error instanceof Error ? error.message : "")) return "QUOTA_EXHAUSTED";
     return "PROVIDER_UNAVAILABLE";
   };
-  const reportValidation = (stage: "candidate" | "refinement", round: number, error: z.ZodError | SyntaxError | GenerationError) => {
+  const reportValidation = (stage: "candidate" | "refinement", round: number, error: z.ZodError | SyntaxError | GenerationError): QuestionGenerationDiagnostic => {
     const category = error instanceof z.ZodError ? "schema" : error instanceof SyntaxError ? "json" : "quality";
     const code = error instanceof SyntaxError ? "INVALID_JSON" : error instanceof GenerationError ? error.code
       : stage === "candidate" ? "INVALID_GENERATED_QUESTION" : "INVALID_REFINEMENT";
@@ -205,7 +209,21 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     }));
     const line = JSON.stringify({ requestId, stage, category, code, issues, issueCount: source.length, truncated: source.length > issues.length }).replaceAll(apiKey, "[REDACTED]");
     console.warn(`[question-generation:validation] ${line}`);
-    trace("validation", round, JSON.parse(line));
+    const diagnostic = JSON.parse(line) as QuestionGenerationDiagnostic;
+    trace("validation", round, diagnostic);
+    return diagnostic;
+  };
+  const reportQualityIssues = (stage: "candidate" | "refinement", round: number, issues: QuestionQualityIssue[]) => {
+    for (const issue of issues) {
+      const diagnostic: QuestionGenerationDiagnostic = {
+        stage, category: "quality", code: issue.code,
+        issues: [{ path: [], code: issue.code, message: issue.message.replaceAll(apiKey, "[REDACTED]").replace(/[\r\n\t]/g, " ").slice(0, 240) }],
+        issueCount: 1, truncated: false
+      };
+      const line = JSON.stringify({ requestId, ...diagnostic });
+      console.warn(`[question-generation:validation] ${line}`);
+      trace("validation", round, { requestId, ...diagnostic });
+    }
   };
   let candidateCalls = 0;
   async function candidate(): Promise<QuestionDraft> {
@@ -216,16 +234,14 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
       const parsed = readQuestionDraft(JSON.parse(response.text ?? ""));
       previousDraft = questionCoreContent(parsed);
       trace("candidate", candidateCalls, parsed);
-      const issue = alignmentIssue(parsed, input.blueprint);
-      if (issue) throw new GenerationError("BLUEPRINT_MISMATCH", issue, 502);
       return parsed;
     } catch (error) {
       if (!(error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError)) throw error;
       feedback = error instanceof z.ZodError
         ? { structuralErrors: error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ").slice(0, 3000) }
         : { structuralErrors: error instanceof SyntaxError ? "Return valid JSON matching the question schema." : (error as Error).message };
-      reportValidation("candidate", candidateCalls, error);
-      lastError = error instanceof GenerationError ? error : new GenerationError("INVALID_GENERATED_QUESTION", "Generated question did not match its schema", 502);
+      const diagnostic = reportValidation("candidate", candidateCalls, error);
+      lastError = new GenerationError(diagnostic.code, diagnostic.code, 502, diagnostic);
       throw lastError;
     }
   }
@@ -242,40 +258,29 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     const context = reviewContext(input);
     const blindDraft = { vignette: parsed.vignette, stem: parsed.stem, options: shuffleValues([parsed.correctAnswer, ...parsed.distractors]) };
     const reviewSignal = AbortSignal.any([signal, AbortSignal.timeout(REVIEW_DEADLINE_MS)]);
-    // Independent results: a failed reviewer must not cancel or discard the other.
-    const results = await Promise.allSettled([
-      call("clinical", candidateCalls, JSON.stringify({ context, question: blindDraft }), clinicalReviewSchema, CLINICAL_REVIEW_INSTRUCTION, reviewSignal)
-        .then((result) => ({ review: readClinicalReview(JSON.parse(result.text ?? ""), blindDraft.options), grounding: result.candidates?.[0]?.groundingMetadata })),
-      call("editorial", candidateCalls, JSON.stringify({ context, question: parsed, annotatedExamples: EDITORIAL_EXAMPLES }), editorialReviewSchema, EDITORIAL_REVIEW_INSTRUCTION, reviewSignal)
-        .then((result) => editorialReviewSchema.parse(JSON.parse(result.text ?? "")))
-    ]);
-    signal.throwIfAborted();
     let clinical: ClinicalReview | undefined;
-    let editorial: EditorialReview | undefined;
     let grounding: GroundingMetadata | undefined;
     const reviewFailures: string[] = [];
-    if (results[0].status === "fulfilled") {
-      clinical = results[0].value.review;
-      grounding = results[0].value.grounding;
+    try {
+      const result = await call("clinical", candidateCalls, JSON.stringify({ context, question: blindDraft }), clinicalReviewSchema, CLINICAL_REVIEW_INSTRUCTION, reviewSignal);
+      clinical = readClinicalReview(JSON.parse(result.text ?? ""), blindDraft.options);
+      grounding = result.candidates?.[0]?.groundingMetadata;
       trace("clinical", candidateCalls, { review: clinical, blindQuestion: blindDraft, grounding });
-    } else {
-      reviewFailures.push(`clinical.${failureCode(results[0].reason)}`);
-      trace("clinical", candidateCalls, { unavailable: true, code: failureCode(results[0].reason) });
+    } catch (error) {
+      if (signal.aborted) throw error;
+      reviewFailures.push(`clinical.${failureCode(error)}`);
+      trace("clinical", candidateCalls, { unavailable: true, code: failureCode(error) });
     }
-    if (results[1].status === "fulfilled") {
-      editorial = results[1].value;
-      trace("editorial", candidateCalls, editorial);
-    } else {
-      reviewFailures.push(`editorial.${failureCode(results[1].reason)}`);
-      trace("editorial", candidateCalls, { unavailable: true, code: failureCode(results[1].reason) });
-    }
-    const findings = reviewFindings(parsed, clinical, editorial);
+    signal.throwIfAborted();
+    const findings = reviewFindings(parsed, clinical);
     const issues = findings.corrections.map((finding) => `${finding.reviewer}.${finding.kind}`);
     if (reviewFailures.length) console.warn(`[question-generation] requestId=${requestId} reviewIncomplete=${reviewFailures.join(",")}`);
     const refinementRound = candidateCalls + 1;
     const reviewFeedback = {
       corrections: findings.corrections, advisories: findings.advisories,
-      clinical: clinical ? { answerText: clinical.answerText, strongestAlternativeText: clinical.strongestAlternativeText, decisiveCaseFact: clinical.decisiveCaseFact } : null,
+      clinical: clinical ? { independentAnswerText: clinical.independentAnswerText, choiceStatus: clinical.choiceStatus,
+        answerText: clinical.answerText, strongestAlternativeText: clinical.strongestAlternativeText,
+        decisiveCaseFact: clinical.decisiveCaseFact, calculation: clinical.calculation } : null,
       reviewFailures
     };
     trace("decision", candidateCalls, { accepted: false, outcome: "refinement_requested", issues, advisories: findings.advisories, reviewFailures, calls });
@@ -284,23 +289,21 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     try {
       const response = await call("refinement", refinementRound, refinementPrompt(input, original, reviewFeedback), refinementSchema, REFINEMENT_INSTRUCTION);
       final = readRefinedQuestion(JSON.parse(response.text ?? ""));
-      validateQuestionQuality(final, input.avoidSignatures, input.blueprint);
+      reportQualityIssues("refinement", refinementRound, validateQuestionQuality(final, input.avoidSignatures, input.blueprint));
       changedFields = changedQuestionFields(original, final);
       trace("refinement", refinementRound, { question: final, changed: changedFields.length > 0, changedFields });
     } catch (error) {
       if (signal.aborted) throw error;
-      if (error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError) {
-        reportValidation("refinement", refinementRound, error);
-      }
+      const diagnostic = error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError
+        ? reportValidation("refinement", refinementRound, error)
+        : undefined;
       const refinementFailure = error instanceof z.ZodError || error instanceof SyntaxError ? "INVALID_REFINEMENT" : failureCode(error);
       trace("refinement", refinementRound, { unavailable: true, code: refinementFailure });
       trace("decision", refinementRound, { accepted: false, outcome: "rejected_refinement", issues, refinementFailure, reviewFailures, calls });
       verbose({ event: "refinement_result", stage: "refinement", round: refinementRound, outcome: "rejected_refinement", refinementFailure, calls });
       // The lean draft cannot be delivered: it has no final teaching content.
       // Preserve provider errors for the normal quota/transport handling below.
-      if (error instanceof z.ZodError || error instanceof SyntaxError || error instanceof GenerationError) {
-        throw new GenerationError("QUALITY_REJECTED", "Unable to produce a complete valid final question", 502);
-      }
+      if (diagnostic) throw new GenerationError(diagnostic.code, diagnostic.code, 502, diagnostic);
       throw error;
     }
     signal.throwIfAborted();

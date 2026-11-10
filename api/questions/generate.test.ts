@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { fetch as handler } from "./generate";
+import { fetch as handler, generationErrorResponse } from "./generate";
+import { GenerationError } from "../../src/server/questionGeneration";
+import type { QuestionGenerationDiagnostic } from "../../src/lib/contracts";
 
 const originalKey = process.env.GEMINI_API_KEY;
 
@@ -9,6 +11,19 @@ afterEach(() => {
 });
 
 describe("POST /api/questions/generate", () => {
+  it("returns the same sanitized validation diagnostic attached to a generation error", async () => {
+    const diagnostic: QuestionGenerationDiagnostic & { requestId: string } = {
+      requestId: "request-id", stage: "refinement", category: "schema", code: "INVALID_REFINEMENT",
+      issues: [{ path: ["distractors", 0, "hint"], code: "too_small", message: "Too small: expected string to have >=15 characters" }],
+      issueCount: 1, truncated: false
+    };
+    const response = generationErrorResponse(new GenerationError("INVALID_REFINEMENT", "INVALID_REFINEMENT", 502, diagnostic));
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ error: {
+      code: "INVALID_REFINEMENT", message: "INVALID_REFINEMENT", diagnostic
+    } });
+  });
+
   it("rejects unsupported methods", async () => {
     const response = await handler(new Request("http://localhost/api/questions/generate", { method: "GET" }));
     expect(response.status).toBe(405);

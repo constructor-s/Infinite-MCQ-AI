@@ -2,7 +2,7 @@ import type { QuestionDraft } from "./questionDraft.js";
 
 export const DISTRACTOR_INSTRUCTION = `Use five homogeneous choices with parallel grammar, scope and detail. Build each distractor as an almost-correct alternative with one specific mistaken fact, phrase, timing, priority or decision rule. For action/communication choices, start from a sound response and change one decision-relevant element, keeping the rest plausible. The supplied case must make that error decisive. Eliminating the alternative should require the case, not merely spotting universally inappropriate behaviour. Keep tone and professionalism comparable, especially for ethics and communication; do not make the key the only respectful or comprehensive response. Avoid absurd actions, gratuitous absolutes, overlapping answers and two defensible best answers. Move shared care details into the vignette.`;
 
-export const OPTION_CONSTRUCTION_INSTRUCTION = `${DISTRACTOR_INSTRUCTION} Keep option lengths comparable without padding; code measures lengths separately.`;
+export const OPTION_CONSTRUCTION_INSTRUCTION = `${DISTRACTOR_INSTRUCTION} Keep option lengths comparable without padding; the application measures lengths separately.`;
 
 export function optionLengthMetrics(question: Pick<QuestionDraft, "correctAnswer" | "distractors">) {
   const words = (text: string) => text.trim().split(/\s+/u).filter(Boolean).length;

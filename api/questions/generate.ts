@@ -1,6 +1,11 @@
 import { ZodError } from "zod";
 import { generateQuestion, GenerationError } from "../../src/server/questionGeneration.js";
 
+export function generationErrorResponse(error: GenerationError): Response {
+  return Response.json({ error: { code: error.code, message: error.message,
+    ...(error.diagnostic ? { diagnostic: error.diagnostic } : {}) } }, { status: error.status });
+}
+
 export async function fetch(request: Request): Promise<Response> {
   const startedAt = Date.now();
   console.info("[question-generation] request started");
@@ -20,7 +25,7 @@ export async function fetch(request: Request): Promise<Response> {
     }
     if (error instanceof GenerationError) {
       console.warn(`[question-generation] request failed code=${error.code} durationMs=${Date.now() - startedAt}`);
-      return Response.json({ error: { code: error.code, message: error.message } }, { status: error.status });
+      return generationErrorResponse(error);
     }
     console.error(`[question-generation] request failed code=INTERNAL_ERROR durationMs=${Date.now() - startedAt}`);
     return Response.json({ error: { code: "INTERNAL_ERROR", message: "Unable to generate a question" } }, { status: 500 });

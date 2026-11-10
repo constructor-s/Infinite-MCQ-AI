@@ -83,6 +83,15 @@ export const generateQuestionRequestSchema = z.object({
 
 export type GenerateQuestionRequest = z.infer<typeof generateQuestionRequestSchema>;
 
+export type QuestionGenerationDiagnostic = {
+  stage: "candidate" | "refinement";
+  category: "schema" | "json" | "quality";
+  code: string;
+  issues: { path: (string | number)[]; code: string; message: string }[];
+  issueCount: number;
+  truncated: boolean;
+};
+
 export type EncounterMode = "fresh" | "review";
 export type FollowUpMessage = { role: "user" | "assistant"; text: string };
 export type Encounter = {

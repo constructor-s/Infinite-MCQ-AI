@@ -1,38 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { clinicalReviewSchema, readClinicalReview, editorialReviewSchema, reviewFindings, EDITORIAL_EXAMPLES, EDITORIAL_REVIEW_INSTRUCTION, CLINICAL_REVIEW_INSTRUCTION, type ClinicalReview, type EditorialReview } from "./questionReview";
+import { clinicalReviewSchema, readClinicalReview, reviewFindings, CLINICAL_REVIEW_INSTRUCTION, type ClinicalReview } from "./questionReview";
 import { draftContent } from "../test/questionContent";
 import { makeQuestion } from "../test/fixtures";
 
-function reviews(): { clinical: ClinicalReview; editorial: EditorialReview } {
+function review(): ClinicalReview {
   return {
-    clinical: { answerText: makeQuestion().options[0].text, strongestAlternativeText: makeQuestion().options[1].text, decisiveCaseFact: "The supplied ECG distinguishes the choices.", corrections: [], advisories: [] },
-    editorial: { corrections: [], advisories: ["Shorten the vignette's opening sentence without removing the decisive findings."] }
+    independentAnswerText: makeQuestion().options[0].text,
+    choiceStatus: "matched",
+    answerText: makeQuestion().options[0].text,
+    strongestAlternativeText: makeQuestion().options[1].text,
+    decisiveCaseFact: "The supplied ECG distinguishes the choices.",
+    calculation: null,
+    corrections: [],
+    advisories: []
   };
 }
 
-describe("lenient review findings", () => {
+describe("clinical review findings", () => {
   it("keeps disagreement and a missing strong distractor advisory", () => {
-    const { clinical, editorial } = reviews();
+    const clinical = review();
     clinical.answerText = makeQuestion().options[1].text;
-    const findings = reviewFindings(draftContent(makeQuestion()), clinical, editorial);
+    const findings = reviewFindings(draftContent(makeQuestion()), clinical);
     expect(findings.corrections).toEqual([]);
     expect(findings.hasCorrectnessDefect).toBe(false);
-    expect(findings.advisories).toHaveLength(3);
+    expect(findings.advisories).toHaveLength(2);
   });
 
-  it("distinguishes demonstrated correctness defects from editorial improvement", () => {
-    const { clinical, editorial } = reviews();
-    editorial.corrections.push({ kind: "answer_giveaway", evidence: "One choice bundles uniquely comprehensive care.", correction: "Compare equivalent dispositions." });
-    expect(reviewFindings(draftContent(makeQuestion()), clinical, editorial).hasCorrectnessDefect).toBe(false);
+  it("distinguishes demonstrated correctness defects from answer giveaways", () => {
+    const clinical = review();
+    clinical.corrections.push({ kind: "answer_giveaway", evidence: "One choice bundles uniquely comprehensive care.", correction: "Compare equivalent dispositions." });
+    expect(reviewFindings(draftContent(makeQuestion()), clinical).hasCorrectnessDefect).toBe(false);
     clinical.corrections.push({ kind: "ambiguity", evidence: "Two choices fit all supplied facts with no priority.", correction: "Supply the decisive timing fact." });
-    expect(reviewFindings(draftContent(makeQuestion()), clinical, editorial).hasCorrectnessDefect).toBe(true);
+    expect(reviewFindings(draftContent(makeQuestion()), clinical).hasCorrectnessDefect).toBe(true);
   });
 
   it("accepts only verbatim choices or null and rejects legacy fields", () => {
-    const { clinical } = reviews();
+    const clinical = review();
     const choices = [clinical.answerText!, clinical.strongestAlternativeText!];
     expect(readClinicalReview(clinical, choices)).toEqual(clinical);
-    expect(readClinicalReview({ ...clinical, answerText: null, strongestAlternativeText: null }, choices).answerText).toBeNull();
+    expect(readClinicalReview({ ...clinical, independentAnswerText: null, choiceStatus: "uncertain", answerText: null, strongestAlternativeText: null }, choices).answerText).toBeNull();
     for (const field of ["answerText", "strongestAlternativeText"] as const) {
       for (const invalid of ["Unknown selection", clinical[field]!.toUpperCase(), clinical[field]! + " "]) {
         expect(() => readClinicalReview({ ...clinical, [field]: invalid }, choices)).toThrow(/exactly match/);
@@ -42,30 +48,58 @@ describe("lenient review findings", () => {
     expect(clinicalReviewSchema.safeParse({ ...clinical, strongestDistractorId: "B" }).success).toBe(false);
   });
 
-  it("keeps a missing or repeated strongest alternative advisory", () => {
-    const { clinical } = reviews();
-    for (const strongestAlternativeText of [null, clinical.answerText]) {
-      expect(reviewFindings(draftContent(makeQuestion()), { ...clinical, strongestAlternativeText }).advisories).toHaveLength(1);
+  it("requires complete structured calculation details or null", () => {
+    const clinical = review();
+    expect(clinicalReviewSchema.safeParse(clinical).success).toBe(true);
+    expect(clinicalReviewSchema.safeParse({ ...clinical, calculation: { formula: "PPV", substitution: "160/200", result: "80%" } }).success).toBe(true);
+    for (const calculation of [
+      { formula: "PPV", substitution: "160/200" },
+      { formula: "", substitution: "160/200", result: "80%" },
+      { formula: "PPV", substitution: "160/200", result: "80%", extra: true }
+    ]) {
+      expect(clinicalReviewSchema.safeParse({ ...clinical, calculation }).success).toBe(false);
     }
   });
 
-  it("keeps compact semantic near-miss calibration in editorial context", () => {
-    // These check calibration context delivery, not the model's medical judgments.
-    expect(EDITORIAL_EXAMPLES).toEqual(expect.arrayContaining([
-      expect.objectContaining({ criterion: "strongDistractor", verdict: "pass", reason: expect.stringContaining("One changed decision rule") }),
-      expect.objectContaining({ criterion: "strongDistractor", verdict: "pass", reason: expect.stringContaining("recognizable interpretation error") }),
-      expect.objectContaining({ criterion: "strongDistractor", verdict: "pass", material: expect.stringContaining("hourly wages") })
-    ]));
-    expect(EDITORIAL_REVIEW_INSTRUCTION).toContain("as if the vignette were hidden");
-    expect(EDITORIAL_REVIEW_INSTRUCTION).toContain("do not spend review findings on length arithmetic");
-    for (const instruction of [EDITORIAL_REVIEW_INSTRUCTION, CLINICAL_REVIEW_INSTRUCTION]) {
-      expect(instruction).toContain("Return empty corrections and advisories");
-      expect(instruction).toContain("Do not put praise");
-    }
+  it("distinguishes an independently solved answer, a matched option, no defensible option, and uncertainty", () => {
+    const clinical = review();
+    const choices = [clinical.answerText!, clinical.strongestAlternativeText!];
+    expect(readClinicalReview(clinical, choices)).toMatchObject({
+      independentAnswerText: clinical.answerText, choiceStatus: "matched", answerText: clinical.answerText
+    });
+
+    const noneDefensible = {
+      ...clinical,
+      independentAnswerText: "A treatment not present among the choices",
+      choiceStatus: "none_defensible" as const,
+      answerText: null,
+      corrections: [{ kind: "clinical_error" as const, evidence: "No choice offers the indicated treatment.", correction: "Add the independently solved treatment as the key." }]
+    };
+    expect(readClinicalReview(noneDefensible, choices)).toMatchObject({
+      choiceStatus: "none_defensible", independentAnswerText: "A treatment not present among the choices", answerText: null
+    });
+    expect(reviewFindings(draftContent(makeQuestion()), noneDefensible).hasCorrectnessDefect).toBe(true);
+    expect(clinicalReviewSchema.safeParse({ ...noneDefensible, corrections: [] }).success).toBe(false);
+    expect(clinicalReviewSchema.safeParse({ ...noneDefensible, answerText: choices[0] }).success).toBe(false);
+    expect(clinicalReviewSchema.safeParse({ ...noneDefensible, independentAnswerText: null }).success).toBe(false);
+
+    const uncertain = { ...clinical, independentAnswerText: null, choiceStatus: "uncertain" as const, answerText: null };
+    expect(readClinicalReview(uncertain, choices)).toMatchObject({ choiceStatus: "uncertain", answerText: null });
+    expect(clinicalReviewSchema.safeParse({ ...uncertain, answerText: choices[0] }).success).toBe(false);
   });
 
-  it("requires explicit, actionable corrections but tolerates unavailable reviewers", () => {
-    expect(editorialReviewSchema.safeParse({ corrections: [{ kind: "clinical_error", evidence: "", correction: "" }], advisories: [] }).success).toBe(false);
+  it("asks the single reviewer to check distractors and calculate material arithmetic", () => {
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("First solve the vignette and stem without using the options");
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("none_defensible");
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("as if the vignette were hidden");
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("use Python to calculate");
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("answer_giveaway");
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("Return empty corrections and advisories");
+    expect(CLINICAL_REVIEW_INSTRUCTION).toContain("Do not put praise");
+  });
+
+  it("requires explicit, actionable corrections and tolerates an unavailable reviewer", () => {
+    expect(clinicalReviewSchema.safeParse({ corrections: [{ kind: "clinical_error", evidence: "", correction: "" }], advisories: [] }).success).toBe(false);
     expect(clinicalReviewSchema.safeParse({}).success).toBe(false);
     expect(reviewFindings(draftContent(makeQuestion())).corrections).toEqual([]);
   });

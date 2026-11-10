@@ -17,14 +17,14 @@ describe('offline evaluation reports', () => {
   it('preserves failure counts and reports length without changing acceptance', () => {
     const results = [{ ...item, trace: [
       { stage: 'candidate', round: 2, data: {} },
-      { stage: 'decision', data: { accepted: false, issues: ['editorial.noAnswerGiveaways'] } },
+      { stage: 'decision', data: { accepted: false, issues: ['clinical.answer_giveaway'] } },
       { stage: 'refinement', data: { changed: true, summary: 'Clarified the decisive case fact.' } },
       { stage: 'decision', data: { accepted: true, outcome: 'refined_changed', changed: true, refinementSummary: 'Clarified the decisive case fact.', issues: [] } }
     ] }, { id: 'two', status: 502, body: { error: { code: 'QUALITY_REJECTED' } } }];
     expect(summarizeResults(results)).toMatchObject({
       attempted: 2, accepted: 1, failed: 1, revisedItems: 1, initialRepairItems: 1, refinementPasses: 1,
       refinementSummaries: [{ id: 'one', outcome: 'refined_changed', changed: true, summary: 'Clarified the decisive case fact.' }],
-      correctionRequests: { 'editorial.noAnswerGiveaways': 1 },
+      correctionRequests: { 'clinical.answer_giveaway': 1 },
       lengthSignals: [{ id: 'one', uniquelyLongestKey: true }]
     });
   });
@@ -49,8 +49,8 @@ describe('offline evaluation reports', () => {
 
   it('does not count a preserved refinement or a failed refinement as changed content', () => {
     const rows = [
-      { ...item, trace: [{ stage: 'refinement', data: { changed: false, summary: 'Preserved after considering both reviews.' } },
-        { stage: 'decision', data: { accepted: true, outcome: 'refined_unchanged', changed: false, refinementSummary: 'Preserved after considering both reviews.' } }] },
+      { ...item, trace: [{ stage: 'refinement', data: { changed: false, summary: 'Preserved after considering clinical review.' } },
+        { stage: 'decision', data: { accepted: true, outcome: 'refined_unchanged', changed: false, refinementSummary: 'Preserved after considering clinical review.' } }] },
       { ...item, id: 'fallback', trace: [{ stage: 'refinement', data: { unavailable: true, changed: false } },
         { stage: 'decision', data: { accepted: true, outcome: 'fallback' } }] }
     ];

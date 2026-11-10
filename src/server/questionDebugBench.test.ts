@@ -46,7 +46,6 @@ describe("question debug bench", () => {
     const events: GenerationTrace[] = [
       { requestId: "test-run", stage: "candidate", round: 1, data: { question: { stem: "candidate" } } },
       { requestId: "test-run", stage: "clinical", round: 1, data: { review: { answerText: "A" } } },
-      { requestId: "test-run", stage: "editorial", round: 1, data: { corrections: [] } },
       { requestId: "test-run", stage: "decision", round: 1, data: { outcome: "refinement_requested" } },
       { requestId: "test-run", stage: "refinement", round: 2, data: { changed: true } },
       { requestId: "test-run", stage: "validation", round: 2, data: { category: "quality" } }

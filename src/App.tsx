@@ -6,7 +6,7 @@ import { studyRepository } from "./db/repository";
 import type { FollowUpMessage, ModelOption, OptionId, Theme } from "./lib/contracts";
 import { useQuestionNavigation } from "./hooks/useQuestionNavigation";
 import { activateTheme, getStoredTheme, normalizeTheme } from "./lib/theme";
-import { ApiError, QUEUE_TARGET, questionQueue, type QueueProgress } from "./services/questionQueue";
+import { ApiError, formatApiError, QUEUE_TARGET, questionQueue, type QueueProgress } from "./services/questionQueue";
 import { sameStudyFocus, studyFocusLabel, type StudyFocus } from "./lib/studyFocus";
 
 const DEFAULT_PROGRESS: QueueProgress = { ready: 0, target: QUEUE_TARGET, generating: false };
@@ -64,7 +64,7 @@ export default function App() {
     }).catch((reason: unknown) => {
       if (!mountedRef.current || request !== fillRequestRef.current || !sameStudyFocus(requestedFocus, focusRef.current)) return;
       const message = reason instanceof ApiError
-        ? reason.message
+        ? formatApiError(reason)
         : reason instanceof Error && reason.name === "AbortError"
           ? "Generation timed out"
           : reason instanceof Error

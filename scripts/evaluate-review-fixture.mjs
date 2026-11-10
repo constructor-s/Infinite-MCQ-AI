@@ -1,4 +1,4 @@
-// Opt-in wording regression replay: one editorial check, one refinement. No production call path changes.
+// Opt-in wording regression replay: one blind clinical/distractor check, one refinement.
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { createServer, loadEnv } from "vite";
@@ -10,7 +10,7 @@ const fixturePath = process.argv[2] ?? fileURLToPath(new URL("../src/test/fixtur
 const output = process.argv[3] ?? "/tmp/iworld-review-fixture-evaluation.json";
 const model = process.argv[4] ?? "gemini-3.5-flash-lite";
 const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
-const report = { fixtureId: fixture.id, provenance: fixture.provenance, model, calls: 0, clinicalReviewStatus: "not_reviewed", legalReviewStatus: "not_reviewed", purpose: "Known wording-regression replay, not a held-out quality or medical/legal validation study." };
+const report = { fixtureId: fixture.id, provenance: fixture.provenance, model, calls: 0, clinicalReviewStatus: "targeted_review_only", legalReviewStatus: "not_reviewed", purpose: "Known wording-regression replay, not a held-out quality or medical/legal validation study." };
 const apiKey = process.env.GEMINI_API_KEY || loadEnv("development", root, "").GEMINI_API_KEY;
 let server;
 try {
@@ -20,6 +20,7 @@ try {
   const contracts = await server.ssrLoadModule("/src/lib/contracts.ts");
   const curriculum = await server.ssrLoadModule("/src/data/curriculum.ts");
   const draftTools = await server.ssrLoadModule("/src/server/questionDraft.ts");
+  const { shuffleValues } = await server.ssrLoadModule("/src/lib/shuffleQuestion.ts");
   const { validateQuestionQuality, GENERATION_THINKING_LEVELS } = await server.ssrLoadModule("/src/server/questionGeneration.ts");
   const { PROMPT_VERSION } = await server.ssrLoadModule("/src/lib/blueprint.ts");
   report.promptVersion = PROMPT_VERSION;
@@ -46,17 +47,23 @@ try {
     const startedAt = Date.now();
     const response = await ai.models.generateContent({ model, contents, config: {
       systemInstruction: instruction, responseMimeType: "application/json", responseJsonSchema: z.toJSONSchema(schema),
-      thinkingConfig: { thinkingLevel }, abortSignal: AbortSignal.timeout(90_000), httpOptions: { timeout: 90_000 }
+      thinkingConfig: { thinkingLevel }, ...(stage === "clinical" ? { tools: [{ googleSearch: {} }, { codeExecution: {} }] } : {}),
+      abortSignal: AbortSignal.timeout(90_000), httpOptions: { timeout: 90_000 }
     } });
     report.callMetrics.push({ stage, call: report.calls, thinkingLevel, durationMs: Date.now() - startedAt, usage: response.usageMetadata });
     return schema.parse(JSON.parse(response.text ?? ""));
   }
-  report.editorial = await call("editorial", JSON.stringify({ context: review.reviewContext(input), question: draft, annotatedExamples: review.EDITORIAL_EXAMPLES }), review.editorialReviewSchema, review.EDITORIAL_REVIEW_INSTRUCTION);
-  report.editorialExpectedFindingDetected = report.editorial.corrections.some((finding) => finding.kind === fixture.expected.correctionKind);
+  const blindQuestion = { vignette: draft.vignette, stem: draft.stem,
+    options: shuffleValues([draft.correctAnswer, ...draft.distractors]) };
+  report.clinical = review.readClinicalReview(await call("clinical", JSON.stringify({ context: review.reviewContext(input), question: blindQuestion }), review.clinicalReviewSchema, review.CLINICAL_REVIEW_INSTRUCTION), blindQuestion.options);
+  report.distractorExpectedFindingDetected = report.clinical.corrections.some((finding) => finding.kind === fixture.expected.correctionKind);
   report.constructionLengthIssueDetected = Boolean(report.lengthIssueBefore);
-  report.expectedFindingDetected = report.editorialExpectedFindingDetected;
-  const findings = review.reviewFindings(draft, undefined, report.editorial);
-  report.reviewFeedback = { corrections: findings.corrections, advisories: findings.advisories, clinical: null, reviewFailures: ["clinical.NOT_RUN_IN_TARGETED_REPLAY"] };
+  report.expectedFindingDetected = report.distractorExpectedFindingDetected;
+  const findings = review.reviewFindings(draft, report.clinical);
+  report.reviewFeedback = { corrections: findings.corrections, advisories: findings.advisories,
+    clinical: { independentAnswerText: report.clinical.independentAnswerText, choiceStatus: report.clinical.choiceStatus,
+      answerText: report.clinical.answerText, strongestAlternativeText: report.clinical.strongestAlternativeText,
+      decisiveCaseFact: report.clinical.decisiveCaseFact, calculation: report.clinical.calculation }, reviewFailures: [] };
   const final = await call("refinement", review.refinementPrompt(input, draft, report.reviewFeedback), review.refinementSchema, review.REFINEMENT_INSTRUCTION);
   report.refinement = { question: review.readRefinedQuestion(final) };
   report.lengthIssueAfter = optionLengthIssue(draftTools.questionCoreContent(report.refinement.question)) ?? null;
