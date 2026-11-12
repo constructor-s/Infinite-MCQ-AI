@@ -1,6 +1,6 @@
-import type { ClinicalQuestion } from "../lib/contracts";
-import { blueprint, PROMPT_VERSION } from "../lib/blueprint";
-import { curriculumVersion, crosswalkVersion } from "../data/curriculum";
+import type { ClinicalQuestion } from "../lib/contracts.js";
+import { blueprint, PROMPT_VERSION } from "../lib/blueprint.js";
+import { curriculumVersion, crosswalkVersion } from "../data/curriculum.js";
 
 export function makeQuestion(overrides: Partial<ClinicalQuestion> = {}): ClinicalQuestion {
   return {

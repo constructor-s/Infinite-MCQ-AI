@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { fetch as handler, generationErrorResponse, generationSuccessResponse } from "./generate";
-import { GenerationError } from "../../src/server/questionGeneration";
-import type { QuestionGenerationDiagnostic, QuestionQualityWarning } from "../../src/lib/contracts";
-import { makeQuestion } from "../../src/test/fixtures";
+import { fetch as handler, generationErrorResponse, generationSuccessResponse } from "../../../../api/questions/generate.js";
+import { GenerationError } from "../../../server/questionGeneration.js";
+import type { QuestionGenerationDiagnostic, QuestionQualityWarning } from "../../../lib/contracts.js";
+import { makeQuestion } from "../../fixtures.js";
 
 const originalKey = process.env.GEMINI_API_KEY;
 
