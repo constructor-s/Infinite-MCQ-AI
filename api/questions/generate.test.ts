@@ -30,10 +30,20 @@ describe("POST /api/questions/generate", () => {
       issues: [{ path: ["distractors", 0, "hint"], code: "too_small", message: "Too small: expected string to have >=15 characters" }],
       issueCount: 1, truncated: false
     };
-    const response = generationErrorResponse(new GenerationError("INVALID_REFINEMENT", "INVALID_REFINEMENT", 502, diagnostic));
+    const response = generationErrorResponse(new GenerationError("INVALID_REFINEMENT", "Final question was incomplete", 502, diagnostic));
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: {
-      code: "INVALID_REFINEMENT", message: "INVALID_REFINEMENT", diagnostic
+      code: "INVALID_REFINEMENT", message: "Final question was incomplete", diagnostic
+    } });
+  });
+
+  it("carries a provider quota explanation and upstream HTTP status to the client", async () => {
+    const response = generationErrorResponse(new GenerationError(
+      "QUOTA_EXHAUSTED", "Provider returned a quota or rate limit error (HTTP 429): daily quota exhausted", 429
+    ));
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toMatchObject({ error: {
+      code: "QUOTA_EXHAUSTED", message: expect.stringContaining("daily quota exhausted")
     } });
   });
 

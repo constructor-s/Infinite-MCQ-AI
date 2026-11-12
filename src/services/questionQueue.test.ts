@@ -171,7 +171,7 @@ describe("QuestionQueueService", () => {
       code: "INVALID_REFINEMENT", diagnostic
     });
     const error = new ApiError("INVALID_REFINEMENT", "INVALID_REFINEMENT", 502, diagnostic);
-    expect(formatApiError(error)).toBe("INVALID_REFINEMENT (refinement/schema): distractors.0.hint: too_small: Too small: expected string to have >=15 characters");
+    expect(formatApiError(error)).toBe("refinement/schema: distractors.0.hint: Too small: expected string to have >=15 characters (HTTP 502)");
     expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error", code: "INVALID_REFINEMENT" }));
   });
 
@@ -201,10 +201,43 @@ describe("QuestionQueueService", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects a successful HTTP response carrying the wrong assignment", async () => {
-    const repository = makeRepository();
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(makeQuestion({ topicId: "wrong-topic" })), { status: 200 })));
-    await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill()).rejects.toThrow(/selected blueprint/);
-    expect(repository.enqueue).not.toHaveBeenCalled();
+  it("keeps complete questions with topic and blueprint mismatches and records warnings", async () => {
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(makeQuestion({
+      topicId: "wrong-topic",
+      blueprint: { ...makeQuestion().blueprint, discipline: "surgery" }
+    })), { status: 200 })));
+    const progress = vi.fn();
+    await new QuestionQueueService(repository as unknown as LocalStudyRepository).fill(progress);
+    expect(repository.enqueue).toHaveBeenCalledOnce();
+    expect(repository.questions.at(-1)?.topicId).toBe("wrong-topic");
+    expect(repository.logGeneration).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: "success",
+      qualityWarnings: expect.arrayContaining([
+        expect.objectContaining({ code: "TOPIC_MISMATCH" }),
+        expect.objectContaining({ code: "BLUEPRINT_MISMATCH" })
+      ])
+    }));
+    expect(progress).toHaveBeenCalledWith(expect.objectContaining({
+      generationSucceeded: true,
+      qualityWarnings: expect.arrayContaining([
+        expect.objectContaining({ code: "TOPIC_MISMATCH" }),
+        expect.objectContaining({ code: "BLUEPRINT_MISMATCH" })
+      ])
+    }));
+  });
+
+  it("shows provider messages and HTTP status without exposing the internal code", () => {
+    expect(formatApiError(new ApiError("QUOTA_EXHAUSTED", "Provider returned HTTP 429 (quota or rate limit): daily quota exhausted", 429)))
+      .toBe("Provider returned HTTP 429 (quota or rate limit): daily quota exhausted");
+    expect(formatApiError(new ApiError("GENERATION_FAILED", "Provider rejected the model request", 503)))
+      .toBe("Provider rejected the model request (HTTP 503)");
+  });
+
+  it("shows the underlying network error when no HTTP response exists", async () => {
+    const repository = makeRepository(Array.from({ length: QUEUE_TARGET - 1 }, () => makeQuestion()));
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("Network connection reset"); }));
+    await expect(new QuestionQueueService(repository as unknown as LocalStudyRepository).fill())
+      .rejects.toMatchObject({ code: "NETWORK_ERROR", message: "Network connection reset" });
   });
 });

@@ -47,6 +47,29 @@ export class GenerationError extends Error {
   }
 }
 
+function providerFailureDetails(error: unknown, apiKey: string): { status?: number; message: string; quotaOrRateLimit: boolean } {
+  const value = typeof error === "object" && error !== null ? error as Record<string, unknown> : {};
+  const nested = typeof value.error === "object" && value.error !== null ? value.error as Record<string, unknown> : {};
+  const response = typeof value.response === "object" && value.response !== null ? value.response as Record<string, unknown> : {};
+  const rawStatus = value.status ?? value.statusCode ?? nested.status ?? response.status;
+  const status = typeof rawStatus === "number" && rawStatus >= 400 && rawStatus <= 599 ? rawStatus : undefined;
+  const rawMessage = typeof value.message === "string" ? value.message
+    : typeof nested.message === "string" ? nested.message
+    : typeof error === "string" ? error : "Provider request failed";
+  let providerDetails = "";
+  try { providerDetails = `${JSON.stringify(nested)} ${JSON.stringify(value.details ?? "")}`; }
+  catch { /* A non-serializable provider detail must not hide the original error. */ }
+  const quotaOrRateLimit = status === 429 || /429|resource_exhausted|quota|rate.?limit/i.test(`${rawMessage} ${providerDetails}`);
+  const message = rawMessage
+    .replaceAll(apiKey, "[REDACTED]")
+    .replace(/([?&](?:api[-_]?key|key|token)=)[^&\s]+/gi, "$1[REDACTED]")
+    .replace(/(x-goog-api-key\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
+    .replace(/(authorization\s*:\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]")
+    .replace(/[\r\n\t]+/g, " ")
+    .slice(0, 600);
+  return { status, message: message || "Provider request failed", quotaOrRateLimit };
+}
+
 export type QuestionQualityIssue = { code: string; message: string };
 
 export function validateQuestionQuality(question: RefinedQuestion, avoidSignatures: string[], assignment: BlueprintTags): QuestionQualityIssue[] {
@@ -332,10 +355,11 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   } catch (error) {
     if (signal.aborted) throw new GenerationError("GENERATION_TIMEOUT", "Question generation timed out", 504);
     if (error instanceof GenerationError) throw error;
-    const message = error instanceof Error ? error.message : "Question generation failed";
-    if (/429|resource_exhausted|quota/i.test(message)) throw new GenerationError("QUOTA_EXHAUSTED", "Gemini quota is temporarily exhausted", 429);
-    // Provider messages can contain request content; expose a stable public error.
-    throw new GenerationError("GENERATION_FAILED", "Unable to generate and review a question", 502);
+    const details = providerFailureDetails(error, apiKey);
+    const code = details.quotaOrRateLimit ? "QUOTA_EXHAUSTED" : "GENERATION_FAILED";
+    const description = details.quotaOrRateLimit ? "Provider returned a quota or rate limit error" : "Provider request failed";
+    const status = details.status ?? (details.quotaOrRateLimit ? 429 : 502);
+    throw new GenerationError(code, `${description}${details.status ? ` (HTTP ${details.status})` : ""}: ${details.message}`, status);
   } finally {
     clearTimeout(timer);
     console.info(`[question-generation] requestId=${requestId} finished calls=${calls} durationMs=${Date.now() - startedAt}`);

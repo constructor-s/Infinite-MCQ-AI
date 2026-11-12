@@ -922,7 +922,7 @@ describe("question generation safeguards", () => {
     generateContent.mockRejectedValue(Object.assign(new Error("private provider detail"), { status: 503 }));
 
     await expect(generateQuestion(request(), "private-test-credential", { onTrace: (event) => traces.push(event) }))
-      .rejects.toMatchObject({ code: "GENERATION_FAILED" });
+      .rejects.toMatchObject({ code: "GENERATION_FAILED", status: 503, message: "Provider request failed (HTTP 503): private provider detail" });
 
     const call = traces.find((event) => event.stage === "call")!;
     expect(call.data).toMatchObject({
@@ -966,7 +966,10 @@ describe("question generation safeguards", () => {
     vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "verbose");
     const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
     generateContent.mockRejectedValue(Object.assign(new Error("429 quota exhausted: ?key=secret-credential"), { status: 429 }));
-    await expect(generateQuestion(request(), "secret-credential")).rejects.toMatchObject({ code: "QUOTA_EXHAUSTED" });
+    await expect(generateQuestion(request(), "secret-credential")).rejects.toMatchObject({
+      code: "QUOTA_EXHAUSTED", status: 429,
+      message: "Provider returned a quota or rate limit error (HTTP 429): 429 quota exhausted: ?key=[REDACTED]"
+    });
     expect(debug).toHaveBeenCalledTimes(1);
     const line = String(debug.mock.calls[0][0]);
     expect(line).not.toContain("secret-credential");
