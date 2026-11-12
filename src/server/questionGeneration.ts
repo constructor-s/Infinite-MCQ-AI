@@ -18,21 +18,26 @@ import { questionDraftSchema, readQuestionDraft, questionCoreContent, toGenerate
 import { optionLengthIssue } from "./questionOptions.js";
 
 export const GENERATION_THINKING_LEVELS = Object.freeze({
-  candidate: ThinkingLevel.MEDIUM,
+  candidate: ThinkingLevel.LOW,
   clinical: ThinkingLevel.LOW,
   refinement: ThinkingLevel.LOW
 });
 
 export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   {
-    id: "gemini-3.5-flash-lite",
-    label: "Economy · Gemini 3.5 Flash-Lite",
-    description: "Fast, efficient background generation"
+    id: "gemini-4-hydrogen",
+    label: "Gemini 4 Hydrogen",
+    description: "New Gemini 4 model"
   },
   {
     id: "gemini-3.8-flash",
-    label: "Quality · Gemini 3.8 Flash",
+    label: "Gemini 3.8 Flash",
     description: "Stronger reasoning with potentially lower throughput"
+  },
+  {
+    id: "gemini-3.5-flash-lite",
+    label: "Gemini 3.5 Flash-Lite",
+    description: "Fast, efficient background generation"
   }
 ];
 

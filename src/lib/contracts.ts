@@ -77,7 +77,7 @@ export const generateQuestionRequestSchema = z.object({
   topicId: z.string().min(3),
   blueprint: blueprintTagsSchema,
   enablingObjectiveId: z.string().min(1),
-  model: z.enum(["gemini-3.5-flash-lite", "gemini-3.8-flash"]),
+  model: z.enum(["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-4-hydrogen"]),
   avoidSignatures: z.array(z.string().min(3).max(120)).max(5).default([])
 });
 
@@ -128,7 +128,7 @@ export type Encounter = {
 };
 
 export type ModelOption = {
-  id: "gemini-3.5-flash-lite" | "gemini-3.8-flash";
+  id: "gemini-3.5-flash-lite" | "gemini-3.8-flash" | "gemini-4-hydrogen";
   label: string;
   description: string;
   available: boolean;

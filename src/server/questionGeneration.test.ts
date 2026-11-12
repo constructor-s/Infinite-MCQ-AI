@@ -91,7 +91,7 @@ describe("question generation safeguards", () => {
       [{ googleSearch: {} }, { codeExecution: {} }],
       undefined
     ]);
-    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW"]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
   });
 
   it("sends each option explanation once in follow-up context", async () => {
@@ -138,7 +138,7 @@ describe("question generation safeguards", () => {
     expect(generateContent.mock.calls[2][0].config.responseJsonSchema.properties.correctAnswer.properties).toHaveProperty("explanation");
     expect(Object.keys(generateContent.mock.calls[0][0].config.responseJsonSchema.properties).sort()).toEqual(["correctAnswer", "distractors", "stem", "vignette"]);
     expect(generateContent.mock.calls[0][0].config.responseJsonSchema.properties.distractors.items.type).toBe("string");
-    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW"]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
     expect(prompt.objective).not.toHaveProperty("content");
     expect(prompt.levelInstruction).toMatch(/graduating medical student entering supervised practice in Canada/);
     expect(prompt.levelInstruction).toMatch(/application of the supplied findings/);
@@ -259,7 +259,7 @@ describe("question generation safeguards", () => {
     const result = await generateQuestion(input, "test-key");
     expect(result.blueprint).toEqual(input.blueprint);
     expect(generateContent).toHaveBeenCalledTimes(4);
-    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "MEDIUM", "LOW", "LOW"]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW", "LOW"]);
     const second = JSON.parse(generateContent.mock.calls[1][0].contents);
     expect(second.correctionRequired.structuralErrors).toMatch(/distractors/);
     expect(second.previousDraft).not.toHaveProperty("blueprint");
@@ -494,7 +494,7 @@ describe("question generation safeguards", () => {
     expect(correct.hint).toBe("Consider how the case findings support this choice.");
     expect(clinicalQuestionSchema.safeParse(result).success).toBe(true);
     expect(generateContent).toHaveBeenCalledTimes(3);
-    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW"]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
     for (const [arg] of generateContent.mock.calls) {
       expect(arg.config.responseMimeType).toBe("application/json");
       expect(arg.config.responseJsonSchema.type).toBe("object");
@@ -836,11 +836,11 @@ describe("question generation safeguards", () => {
       return JSON.parse(String(line).slice("[question-generation:verbose] ".length));
     });
     const rows = allRows.filter((row) => row.event === "call_result");
-    expect(rows.map((row) => row.thinkingLevel)).toEqual(["MEDIUM", "LOW", "LOW"]);
+    expect(rows.map((row) => row.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
     const calls = events.filter((event) => event.stage === "call");
     for (const [index, stage] of ["candidate", "clinical", "refinement"].entries()) {
       expect(calls).toContainEqual(expect.objectContaining({ data: expect.objectContaining({
-        stage, thinkingLevel: index === 0 ? "MEDIUM" : "LOW", durationMs: expect.any(Number)
+        stage, thinkingLevel: "LOW", durationMs: expect.any(Number)
       }) }));
     }
     for (const event of calls) {
@@ -934,7 +934,7 @@ describe("question generation safeguards", () => {
           systemInstruction: expect.any(String),
           responseMimeType: "application/json",
           responseJsonSchema: expect.any(Object),
-          thinkingConfig: { thinkingLevel: "MEDIUM" },
+          thinkingConfig: { thinkingLevel: "LOW" },
           httpOptions: { timeout: expect.any(Number) }
         }
       },
