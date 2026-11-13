@@ -80,12 +80,14 @@ function reviewProvider(candidates: GeneratedQuestion[], options: ReviewOptions 
 }
 
 describe("question generation safeguards", () => {
-  it.each(["gemini-3.5-flash-lite", "gemini-3.8-flash"] as const)("uses code execution only for clinical review for %s", async (model) => {
+  it.each(["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-4-hydrogen"] as const)("uses selected candidate model %s and Flash-Lite reviewers with LOW thinking", async (model) => {
     const input = { ...request(), model };
     reviewProvider([{ ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" }]);
-    await generateQuestion(input, "test-key");
+    const result = await generateQuestion(input, "test-key");
     expect(generateContent).toHaveBeenCalledTimes(3);
-    expect(generateContent.mock.calls.map(([arg]) => arg.model)).toEqual([model, model, model]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.model)).toEqual([model, "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]);
+    expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
+    expect(result.model).toBe(model);
     expect(generateContent.mock.calls.map(([arg]) => arg.config.tools)).toEqual([
       undefined,
       [{ googleSearch: {} }, { codeExecution: {} }],
@@ -94,24 +96,28 @@ describe("question generation safeguards", () => {
     expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
   });
 
-  it("sends each option explanation once in follow-up context", async () => {
+  it("sends the vignette, stem and labeled option text before the actual follow-up conversation", async () => {
     const question = makeQuestion();
     generateContent.mockResolvedValue({ text: "A concise answer." });
-    await answerQuestionFollowUp({ question: { ...question, shortExplanation: question.options[0].explanation }, messages: [{ role: "user", text: "Why?" }] }, "test-key");
-    const text = generateContent.mock.calls[0][0].contents[0].parts[0].text;
-    const context = JSON.parse(text.slice(text.indexOf("\n") + 1));
-    expect(context).not.toHaveProperty("rationale");
-    expect(context).not.toHaveProperty("shortExplanation");
-    expect(context.options).toEqual(question.options.map(({ id, text, explanation }) => ({ id, text, explanation })));
+    await answerQuestionFollowUp({ model: "gemini-3.8-flash", question, messages: [{ role: "user", text: "Why?" }] }, "test-key");
+    expect(generateContent.mock.calls[0][0].contents).toEqual([
+      { role: "user", parts: [{ text: `Vignette:\n${question.vignette}\n\nQuestion:\n${question.stem}\n\nOptions:\n${question.options.map(({ id, text }) => `${id}. ${text}`).join("\n")}` }] },
+      { role: "user", parts: [{ text: "Why?" }] }
+    ]);
   });
 
-  it.each(["gemini-3.5-flash-lite", "gemini-3.8-flash"] as const)("offers code execution for follow-ups with %s without changing other options", async (model) => {
+  it.each(["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-4-hydrogen"] as const)("uses the selected follow-up model %s with LOW thinking, web search and code execution", async (model) => {
     generateContent.mockResolvedValue({ text: "The calculated risk is 10%." });
-    const result = await answerQuestionFollowUp({ question: { ...makeQuestion(), model }, messages: [{ role: "user", text: "How is the risk calculated?" }] }, "test-key");
+    const result = await answerQuestionFollowUp({ model, question: makeQuestion(), messages: [{ role: "user", text: "How is the risk calculated?" }] }, "test-key");
     expect(result).toBe("The calculated risk is 10%.");
     expect(generateContent).toHaveBeenCalledTimes(1);
-    expect(generateContent.mock.calls[0][0]).toMatchObject({ model, config: { tools: [{ codeExecution: {} }], temperature: 0.3, maxOutputTokens: 700 } });
-    expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("thinkingConfig");
+    expect(generateContent.mock.calls[0][0]).toMatchObject({ model, config: {
+      tools: [{ googleSearch: {} }, { codeExecution: {} }], temperature: 0.3,
+      thinkingConfig: { thinkingLevel: "LOW" }, httpOptions: { retryOptions: { attempts: 1 } }
+    } });
+    expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("maxOutputTokens");
+    expect(generateContent.mock.calls[0][0].config).not.toHaveProperty("responseJsonSchema");
+    expect(generateContent.mock.calls[0][0].config.systemInstruction).toContain("plain text without Markdown");
   });
 
   it("grounds the prompt in the exact eligible task and enabling objective", () => {
@@ -253,12 +259,13 @@ describe("question generation safeguards", () => {
   });
 
   it("repairs the actual structurally invalid draft and preserves the assignment", async () => {
-    const input = request();
+    const input = { ...request(), model: "gemini-4-hydrogen" as const };
     const response = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
     reviewProvider([{ ...response, options: response.options.slice(0, 4) }, response]);
     const result = await generateQuestion(input, "test-key");
     expect(result.blueprint).toEqual(input.blueprint);
     expect(generateContent).toHaveBeenCalledTimes(4);
+    expect(generateContent.mock.calls.map(([arg]) => arg.model)).toEqual(["gemini-4-hydrogen", "gemini-4-hydrogen", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]);
     expect(generateContent.mock.calls.map(([arg]) => arg.config.thinkingConfig.thinkingLevel)).toEqual(["LOW", "LOW", "LOW", "LOW"]);
     const second = JSON.parse(generateContent.mock.calls[1][0].contents);
     expect(second.correctionRequired.structuralErrors).toMatch(/distractors/);
@@ -824,7 +831,7 @@ describe("question generation safeguards", () => {
   it("logs filterable verbose results with stable call numbers and redacted metadata", async () => {
     vi.stubEnv("QUESTION_GENERATION_LOG_LEVEL", "verbose");
     const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
-    const input = request();
+    const input = { ...request(), model: "gemini-4-hydrogen" as const };
     const candidate = { ...generated(), blueprint: input.blueprint, stem: "Which treatment is most appropriate?" };
     reviewProvider([candidate], { grounding: { webSearchQueries: ["reference test-key"] } });
     const events: { stage: string; data: unknown }[] = [];
@@ -836,6 +843,7 @@ describe("question generation safeguards", () => {
       return JSON.parse(String(line).slice("[question-generation:verbose] ".length));
     });
     const rows = allRows.filter((row) => row.event === "call_result");
+    expect(rows.map((row) => row.model)).toEqual(["gemini-4-hydrogen", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]);
     expect(rows.map((row) => row.thinkingLevel)).toEqual(["LOW", "LOW", "LOW"]);
     const calls = events.filter((event) => event.stage === "call");
     for (const [index, stage] of ["candidate", "clinical", "refinement"].entries()) {
@@ -848,7 +856,7 @@ describe("question generation safeguards", () => {
       expect(event.data).toHaveProperty("request");
       expect(event.data).toHaveProperty("nonTextParts", []);
     }
-    expect(allRows.find((row) => row.event === "refinement_result")).toMatchObject({ outcome: "refined_unchanged", changed: false, changedFields: [] });
+    expect(allRows.find((row) => row.event === "refinement_result")).toMatchObject({ model: "gemini-3.5-flash-lite", outcome: "refined_unchanged", changed: false, changedFields: [] });
     expect(rows.map(({ stage, call, round, status }) => ({ stage, call, round, status }))).toEqual([
       { stage: "candidate", call: 1, round: 1, status: "success" },
       { stage: "clinical", call: 2, round: 1, status: "success" },

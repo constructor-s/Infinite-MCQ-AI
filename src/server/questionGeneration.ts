@@ -23,6 +23,8 @@ export const GENERATION_THINKING_LEVELS = Object.freeze({
   refinement: ThinkingLevel.LOW
 });
 
+const CLINICAL_AND_REFINEMENT_MODEL = "gemini-3.5-flash-lite";
+
 export const MODEL_OPTIONS: Omit<ModelOption, "available">[] = [
   {
     id: "gemini-4-hydrogen",
@@ -124,6 +126,11 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   const timer = setTimeout(() => deadline.abort(), GENERATION_DEADLINE_MS);
   timer.unref?.();
   const startedAt = Date.now();
+  const stageModels = {
+    candidate: input.model,
+    clinical: CLINICAL_AND_REFINEMENT_MODEL,
+    refinement: CLINICAL_AND_REFINEMENT_MODEL
+  };
   const verboseLogging = ["verbose", "debug"].includes((process.env.QUESTION_GENERATION_LOG_LEVEL ?? "info").toLowerCase());
   let calls = 0;
   let feedback: unknown;
@@ -133,12 +140,12 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
     try { options.onTrace?.({ requestId, stage, round, data }); }
     catch { console.warn(`[question-generation] requestId=${requestId} trace failed`); }
   };
-  const verbose = (data: Record<string, unknown>) => {
+  const verbose = (data: Record<string, unknown> & { stage: keyof typeof stageModels }) => {
     if (!verboseLogging) return;
     try {
       // Explicit response fields only; never dump SDK objects, prompts, headers
       // or raw exceptions. Redact the configured credential defensively too.
-      const line = JSON.stringify({ level: "verbose", event: "call_result", requestId, model: input.model, ...data });
+      const line = JSON.stringify({ level: "verbose", event: "call_result", requestId, model: stageModels[data.stage], ...data });
       console.debug(`[question-generation:verbose] ${line.replaceAll(apiKey, "[REDACTED]")}`);
     } catch {
       console.warn(`[question-generation] requestId=${requestId} verbose logging failed`);
@@ -147,11 +154,12 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
   async function call(stage: "candidate" | "clinical" | "refinement", round: number, contents: string, schema: z.ZodType, instruction: string, callSignal = signal) {
     callSignal.throwIfAborted();
     const thinkingLevel = GENERATION_THINKING_LEVELS[stage];
+    const model = stageModels[stage];
     const callNumber = ++calls;
     const callStarted = Date.now();
     const tools = stage === "clinical" ? [{ googleSearch: {} }, { codeExecution: {} }] : undefined;
     const requestPayload = {
-      model: input.model,
+      model,
       contents,
       config: {
         systemInstruction: instruction,
@@ -162,7 +170,7 @@ export async function generateQuestion(rawInput: unknown, apiKey = process.env.G
         ...(tools ? { tools } : {})
       }
     };
-    console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} model=${input.model} thinkingLevel=${thinkingLevel} started`);
+    console.info(`[question-generation] requestId=${requestId} stage=${stage} round=${round} call=${callNumber} model=${model} thinkingLevel=${thinkingLevel} started`);
     // Race the provider so the deadline also holds if a transport ignores cancellation.
     let abortListener: () => void = () => {};
     try {

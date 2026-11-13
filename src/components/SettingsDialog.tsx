@@ -114,7 +114,7 @@ export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApply
         </div>
         <StudyFocusSettings focus={studyFocus} onApply={onApplyFocus} />
         <fieldset>
-          <legend>Question model</legend>
+          <legend>Candidate model</legend>
           {models.map((model) => (
             <label className={`model-option ${!model.available ? "is-unavailable" : ""}`} key={model.id}>
               <input
@@ -129,7 +129,7 @@ export function SettingsDialog({ open, selectedModel, theme, studyFocus, onApply
             </label>
           ))}
         </fieldset>
-        <p className="settings-note">Changes apply to newly generated questions. Existing questions stay in your local queue.</p>
+        <p className="settings-note">Clinical review and final refinement always use Gemini 3.5 Flash-Lite. Model changes apply to newly generated questions and follow-up replies. Existing questions stay in your local queue.</p>
         <fieldset className="appearance-settings">
           <legend>Appearance</legend>
           <div className="theme-options">

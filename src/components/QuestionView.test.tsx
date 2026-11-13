@@ -14,6 +14,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
 }
 
 const viewHandlers = () => ({
+  selectedModel: "gemini-3.5-flash-lite" as const,
   onSelect: vi.fn(), onReveal: vi.fn(), onNext: vi.fn(), onFollowUpMessagesChange: vi.fn()
 });
 

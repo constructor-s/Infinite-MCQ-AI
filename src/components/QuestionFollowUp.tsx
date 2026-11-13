@@ -1,44 +1,80 @@
 import { type FormEvent, useState } from "react";
-import type { ClinicalQuestion, FollowUpMessage } from "../lib/contracts";
+import type { ClinicalQuestion, FollowUpMessage, ModelOption } from "../lib/contracts";
 
 type Props = {
   question: ClinicalQuestion;
+  selectedModel: ModelOption["id"];
   messages: FollowUpMessage[];
   onMessagesChange: (messages: FollowUpMessage[]) => Promise<void>;
 };
 
-export function QuestionFollowUp({ question, messages: savedMessages, onMessagesChange }: Props) {
+type FailedRequest = { messages: FollowUpMessage[]; answer?: string };
+
+async function readAnswer(response: Response): Promise<string> {
+  const raw = await response.text();
+  let body: { answer?: unknown; error?: { code?: unknown; message?: unknown } } | undefined;
+  try { body = JSON.parse(raw) ?? undefined; } catch { /* Preserve non-JSON server errors below. */ }
+  if (!response.ok) {
+    const code = typeof body?.error?.code === "string" ? body.error.code : "";
+    const message = typeof body?.error?.message === "string" ? body.error.message : raw || response.statusText || "Follow-up is unavailable";
+    throw new Error(`${message} (HTTP ${response.status}${code ? `; ${code}` : ""})`);
+  }
+  if (typeof body?.answer !== "string" || !body.answer.trim()) {
+    throw new Error(`${raw || "Gemini returned no answer"} (HTTP ${response.status}; INVALID_RESPONSE)`);
+  }
+  return body.answer;
+}
+
+export function QuestionFollowUp({ question, selectedModel, messages: savedMessages, onMessagesChange }: Props) {
   const [draft, setDraft] = useState("");
   const [pendingMessages, setPendingMessages] = useState<FollowUpMessage[]>();
   const messages = pendingMessages ?? savedMessages;
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [failedRequest, setFailedRequest] = useState<FailedRequest>();
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    const text = draft.trim();
-    if (!text || sending) return;
-    const nextMessages: FollowUpMessage[] = [...messages, { role: "user", text }];
+  const send = async (nextMessages: FollowUpMessage[], savedAnswer?: string) => {
+    if (sending) return;
     setPendingMessages(nextMessages);
-    setDraft("");
     setSending(true);
     setError("");
+    setFailedRequest(undefined);
+    let answer = savedAnswer;
     try {
-      const response = await fetch("/api/questions/follow-up", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, messages: nextMessages.slice(-10) })
-      });
-      const body = await response.json() as { answer?: string; error?: { message?: string } };
-      if (!response.ok || !body.answer) throw new Error(body.error?.message || "Follow-up is unavailable");
-      const completedMessages: FollowUpMessage[] = [...nextMessages, { role: "assistant", text: body.answer }];
+      if (answer === undefined) {
+        const response = await fetch("/api/questions/follow-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: selectedModel,
+            question: {
+              vignette: question.vignette,
+              stem: question.stem,
+              options: question.options.map(({ id, text }) => ({ id, text }))
+            },
+            messages: nextMessages.slice(-10)
+          })
+        });
+        answer = await readAnswer(response);
+      }
+      const completedMessages: FollowUpMessage[] = [...nextMessages, { role: "assistant", text: answer }];
+      setPendingMessages(completedMessages);
       await onMessagesChange(completedMessages);
       setPendingMessages(undefined);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Follow-up is unavailable");
+      setFailedRequest({ messages: nextMessages, answer });
     } finally {
       setSending(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const text = draft.trim();
+    if (!text || sending) return;
+    setDraft("");
+    void send([...messages, { role: "user", text }]);
   };
 
   return (
@@ -69,6 +105,7 @@ export function QuestionFollowUp({ question, messages: savedMessages, onMessages
         <button type="submit" disabled={sending || !draft.trim()}>Ask</button>
       </form>
       {error && <p className="inline-error" role="alert">{error}</p>}
+      {failedRequest && <button className="text-button" type="button" disabled={sending} onClick={() => void send(failedRequest.messages, failedRequest.answer)}>Retry</button>}
     </section>
   );
 }

@@ -261,6 +261,7 @@ export default function App() {
         <QuestionView
           key={encounter.id}
           question={question}
+          selectedModel={selectedModel}
           encounter={encounter}
           mode={mode}
           busy={busy}

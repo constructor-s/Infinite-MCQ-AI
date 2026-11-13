@@ -477,6 +477,27 @@ describe("question navigation", () => {
     expect(await db.encounters.count()).toBe(1);
   });
 
+  it("uses the saved menu selection for a follow-up to a question generated with another model", async () => {
+    const question = makeQuestion({ model: "gemini-3.5-flash-lite" });
+    const saved = await complete(question);
+    await studyRepository.setSetting("selectedModel", "gemini-3.8-flash");
+    vi.mocked(fetchModels).mockResolvedValueOnce({ models: [
+      { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash", description: "Quality", available: true }
+    ] });
+    history.replaceState({ iworldEncounterId: saved.id }, "", questionUrl(question.id));
+    render(<App />);
+    const input = await screen.findByRole("textbox", { name: "Ask about this question" });
+    // Wait for settings initialization to finish before submitting.
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+    await waitFor(() => expect(screen.getByRole("radio", { name: /Gemini 3.8 Flash/ })).toBeChecked());
+    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
+    fireEvent.change(input, { target: { value: "Why this treatment?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).model).toBe("gemini-3.8-flash");
+    await screen.findByText("Saved explanation");
+  });
+
   it.each([false, true])("saves a late follow-up to its original encounter (returned before reply: %s)", async (returnBeforeReply) => {
     const past = makeQuestion({ stem: "Which past treatment is most appropriate?" });
     const saved = await complete(past);

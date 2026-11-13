@@ -1,9 +1,10 @@
-import type { ClinicalQuestion, Encounter, FollowUpMessage, OptionId } from "../lib/contracts";
+import type { ClinicalQuestion, Encounter, FollowUpMessage, ModelOption, OptionId } from "../lib/contracts";
 import { QuestionFollowUp } from "./QuestionFollowUp";
 import { QuestionFeedback } from "./QuestionFeedback";
 
 type Props = {
   question: ClinicalQuestion;
+  selectedModel: ModelOption["id"];
   encounter: Encounter;
   mode: "fresh" | "review";
   busy: boolean;
@@ -13,7 +14,7 @@ type Props = {
   onFollowUpMessagesChange: (messages: FollowUpMessage[]) => Promise<void>;
 };
 
-export function QuestionView({ question, encounter, mode, busy, onSelect, onReveal, onNext, onFollowUpMessagesChange }: Props) {
+export function QuestionView({ question, selectedModel, encounter, mode, busy, onSelect, onReveal, onNext, onFollowUpMessagesChange }: Props) {
   const resolved = Boolean(encounter.completedAt);
   const lastWrongId = [...encounter.selectedOptionIds].reverse().find((id) => id !== question.correctOptionId);
   const lastWrong = question.options.find((option) => option.id === lastWrongId);
@@ -82,6 +83,7 @@ export function QuestionView({ question, encounter, mode, busy, onSelect, onReve
             <QuestionFeedback questionId={question.id} encounterId={encounter.id} />
             <QuestionFollowUp
               question={question}
+              selectedModel={selectedModel}
               messages={encounter.followUpMessages ?? []}
               onMessagesChange={onFollowUpMessagesChange}
             />
